@@ -8,7 +8,7 @@
 </head>
 <body>
 <header><div class="hd"><div><h1>محاكي الشبكات والألياف الضوئية (FTTH)</h1><p>ميزانية القدرة، OTDR، تذاكر الأعطال، مؤشرات SLA، VLAN وطرفية أوامر.</p></div>
-<div class="tb noprint"><button id="th">🌓 المظهر</button><button id="prt">🖨️ تقرير</button><button id="save">💾 حفظ</button><button id="load">📂 تحميل</button><button id="exp">⬇ تصدير JSON</button><label class="btn">⬆ استيراد<input type="file" id="imp" accept=".json" hidden></label></div></div></header>
+<div class="tb noprint"><button id="th">🌓 المظهر</button><button id="prt">📄 تقرير PDF</button><button id="lg">🌐 EN</button><button id="save">💾 حفظ</button><button id="load">📂 تحميل</button><button id="exp">⬇ تصدير JSON</button><label class="btn">⬆ استيراد<input type="file" id="imp" accept=".json" hidden></label></div></div></header>
 <main>
 <div class="notice"><strong>تنبيه:</strong> هذه محاكاة برمجية تعليمية فقط، وليست فحصاً لشبكة حقيقية. لا تُرسل حزم فعلية، والقيم (زمن الاستجابة، القدرة الضوئية، OTDR، التكاليف) افتراضية محسوبة نظرياً.</div>
 <div class="layout">
@@ -25,14 +25,16 @@
       <div class="stat"><span>SLA (99.9%)</span><strong id="sla">—</strong></div>
       <div class="stat"><span>MTTR</span><strong id="mttr">—</strong></div>
       <div class="stat"><span>MTBF</span><strong id="mtbf">—</strong></div>
-      <div class="stat"><span>التذاكر المفتوحة</span><strong id="tko">0</strong></div>
+      <div class="stat"><span>التذاكر المفتوحة</span><strong id="tko">0</strong></div><div class="stat"><span>Jitter</span><strong id="jit">—</strong></div><div class="stat"><span>Throughput</span><strong id="thr">—</strong></div><div class="stat"><span>الأمان</span><strong id="sec">—</strong></div>
     </div>
     <hr><strong>ميزانية القدرة الضوئية للمسار المحدد</strong><table id="bud"></table>
     <p class="help">Rx = Tx(+3 dBm) − (طول×التوهين + موصلات 0.5 dB×2 + لحامات 0.1 dB + سبليتر + عطل). الحساسية ‎−27 dBm.</p>
-    <hr><strong>أثر OTDR للوصلة المحددة</strong><canvas id="ot" width="600" height="150"></canvas>
+    <hr><strong>التشخيص الميداني (قيم قياسية)</strong><table id="dg2"></table><div id="dgm" class="li"></div>
+    <details><summary>قيم مرجعية قياسية (ITU-T / TIA)</summary><table><tr><td>توهين SM 1310 / 1490 / 1550 nm</td><td>0.35 / 0.25 / 0.22 dB/km</td></tr><tr><td>توهين MM 850 / 1300 nm</td><td>3.0 / 1.0 dB/km</td></tr><tr><td>موصل (حد أقصى)</td><td>0.5 dB</td></tr><tr><td>لحام انصهاري</td><td>≤ 0.1 dB</td></tr><tr><td>سبليتر 1:2 / 1:4 / 1:8 / 1:16</td><td>3.5 / 7.2 / 10.5 / 13.8 dB</td></tr><tr><td>انعكاس UPC / APC</td><td>≤ −50 / ≤ −60 dB</td></tr><tr><td>موصل متسخ</td><td>≈ −35 dB</td></tr><tr><td>طرف مقطوع (Fresnel)</td><td>≈ −14 dB</td></tr><tr><td>GPON B+: Tx OLT</td><td>+1.5 … +5 dBm</td></tr><tr><td>حساسية / تشبع ONT</td><td>−27 / −8 dBm</td></tr><tr><td>أقصى مسافة</td><td>20 km</td></tr></table></details>
+    <hr><strong>أثر OTDR للوصلة المحددة</strong><canvas id="ot" width="600" height="150"></canvas><table id="oev"></table>
     <hr><strong>زمن الاستجابة (آخر 40 حزمة)</strong><canvas id="lc" width="600" height="110"></canvas>
     <hr><strong>مقارنة تكلفة تقديرية (ليف مقابل نحاس)</strong><table id="cost"></table>
-    <p class="help">اسحب الأجهزة لتغيير أماكنها. انقر على جهاز أو خط لتحديده.</p>
+    <hr><strong>GPON وDBA</strong><table id="gp"></table><hr><strong>جدوى الشبكة (CAPEX/OPEX/ROI)</strong><table id="biz"></table><hr><strong>لوحة ODF (كابل 12 ليفاً)</strong><div id="odf" class="odf"></div><p class="help">اسحب الأجهزة لتغيير أماكنها. انقر على جهاز أو خط لتحديده.</p>
   </div>
 </section>
 <aside class="panel noprint">
@@ -46,6 +48,7 @@
     <details open><summary>الوصلة والجهاز</summary>
       <div class="field"><label for="linkSel">الوصلة المحددة</label><select id="linkSel"></select></div>
       <div class="row"><div><label for="len">الطول (km)</label><input id="len" type="number" min="0.01" max="20" step="0.01"></div><div><label for="sp">عدد اللحامات</label><input id="sp" type="number" min="0" max="20"></div></div>
+      <div class="row"><div><label for="col">لون الليف</label><select id="col"></select></div><div><label for="odfs">عبر ODF/FDB</label><select id="odfs"><option value="0">مباشر</option><option value="1">عبر ODF (+1 dB)</option></select></div></div>
       <div class="field"><label for="fault">حالة الوصلة</label><select id="fault"><option value="ok">سليمة</option><option value="dirty">موصل متسخ (+3 dB)</option><option value="bend">انحناء (+1.5 dB)</option><option value="cut">مقطوعة</option></select></div>
       <div class="row"><button class="red" id="cut">قطع الوصلة</button><button class="green" id="fix">إعادة الاتصال</button></div>
       <div class="row"><button id="otdr">🔦 فحص OTDR</button><button id="pm">📶 قياس القدرة</button></div>
@@ -55,7 +58,9 @@
     <details><summary>🎯 سيناريو تدريبي واختبار</summary>
       <p class="help">يُخفى العطل ويُحدَّد خلال 120 ث. اختر الوصلة من القائمة أعلاه والنوع هنا.</p>
       <div class="row"><button id="trs">بدء السيناريو</button><div><select id="dg"><option value="cut">قطع</option><option value="dirty">موصل متسخ</option><option value="bend">انحناء</option></select></div></div>
-      <div class="row"><button class="primary" id="trd">تأكيد التشخيص</button><div class="stat"><span>الوقت المتبقي</span><strong id="tm">—</strong></div></div></details>
+      <div class="row"><button id="exs">اختبار كامل (5 أعطال)</button><button id="cert">🎓 شهادة PDF</button></div><div class="field"><label for="nm">اسم المتدرب</label><input id="nm" value="علي كامل ياسين"></div><div class="row"><button class="primary" id="trd">تأكيد التشخيص</button><div class="stat"><span>الوقت المتبقي</span><strong id="tm">—</strong></div></div></details>
+    <details><summary>GPON وDBA والجدوى</summary><div class="row"><div><label for="bw">عرض النطاق المتعاقد للجهاز المحدد (Mbps)</label><input id="bw" type="number" min="10" max="1000"></div><div><label for="dba">DBA</label><select id="dba"><option value="1">مفعّل</option><option value="0">معطّل</option></select></div></div><div class="row"><div><label for="fee">الاشتراك الشهري ($)</label><input id="fee" type="number" min="1"></div><div><label for="opx">OPEX لكل km ($/شهر)</label><input id="opx" type="number" min="0"></div></div></details>
+    <details><summary>الأمان وQoS</summary><div class="field"><label for="qos">فئة الحركة</label><select id="qos"><option value="v">صوت (أولوية عالية)</option><option value="vi">فيديو</option><option value="d" selected>بيانات</option></select></div><div class="row"><div><label for="as">المصدر</label><select id="as"></select></div><div><label for="ad">الوجهة</label><select id="ad"></select></div></div><div class="row"><button id="aa">+ قاعدة حظر ACL</button><button id="fw">جدار ناري: معطّل</button></div><button id="atk" class="red">⚠ هجوم ONT مارق</button><div id="acl" class="list"></div></details>
     <details open><summary>تذاكر الأعطال (Incidents)</summary><div id="tk" class="list"></div></details>
     <details><summary>الطرفية (ping · trace · ip · vlan)</summary>
       <div id="tout" class="term"></div><input id="tin" dir="ltr" placeholder="help" autocomplete="off" autocapitalize="off"></details>
