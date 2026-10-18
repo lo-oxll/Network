@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>محاكي الشبكات والألياف الضوئية</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><div class="hd"><div><h1>محاكي الشبكات والألياف الضوئية (FTTH)</h1><p>ميزانية القدرة، OTDR، تذاكر الأعطال، مؤشرات SLA، VLAN وطرفية أوامر.</p></div>
+<div class="tb noprint"><button id="th">🌓 المظهر</button><button id="prt">🖨️ تقرير</button><button id="save">💾 حفظ</button><button id="load">📂 تحميل</button><button id="exp">⬇ تصدير JSON</button><label class="btn">⬆ استيراد<input type="file" id="imp" accept=".json" hidden></label></div></div></header>
+<main>
+<div class="notice"><strong>تنبيه:</strong> هذه محاكاة برمجية تعليمية فقط، وليست فحصاً لشبكة حقيقية. لا تُرسل حزم فعلية، والقيم (زمن الاستجابة، القدرة الضوئية، OTDR، التكاليف) افتراضية محسوبة نظرياً.</div>
+<div class="layout">
+<section class="panel">
+  <div class="heading"><h2>مخطط الشبكة</h2></div>
+  <div class="canvas" id="canvas"><svg id="links"></svg></div>
+  <div class="body">
+    <div class="stats">
+      <div class="stat"><span>الحزم المرسلة</span><strong id="sent">0</strong></div>
+      <div class="stat"><span>الحزم الناجحة</span><strong id="succ">0</strong></div>
+      <div class="stat"><span>نسبة الفقد</span><strong id="loss">—</strong></div>
+      <div class="stat"><span>متوسط الاستجابة</span><strong id="lat">—</strong></div>
+      <div class="stat"><span>التوافر</span><strong id="av">—</strong></div>
+      <div class="stat"><span>SLA (99.9%)</span><strong id="sla">—</strong></div>
+      <div class="stat"><span>MTTR</span><strong id="mttr">—</strong></div>
+      <div class="stat"><span>MTBF</span><strong id="mtbf">—</strong></div>
+      <div class="stat"><span>التذاكر المفتوحة</span><strong id="tko">0</strong></div>
+    </div>
+    <hr><strong>ميزانية القدرة الضوئية للمسار المحدد</strong><table id="bud"></table>
+    <p class="help">Rx = Tx(+3 dBm) − (طول×التوهين + موصلات 0.5 dB×2 + لحامات 0.1 dB + سبليتر + عطل). الحساسية ‎−27 dBm.</p>
+    <hr><strong>أثر OTDR للوصلة المحددة</strong><canvas id="ot" width="600" height="150"></canvas>
+    <hr><strong>زمن الاستجابة (آخر 40 حزمة)</strong><canvas id="lc" width="600" height="110"></canvas>
+    <hr><strong>مقارنة تكلفة تقديرية (ليف مقابل نحاس)</strong><table id="cost"></table>
+    <p class="help">اسحب الأجهزة لتغيير أماكنها. انقر على جهاز أو خط لتحديده.</p>
+  </div>
+</section>
+<aside class="panel noprint">
+  <div class="heading"><h2>لوحة التحكم</h2></div>
+  <div class="body">
+    <div id="status"></div>
+    <details open><summary>إرسال الحزم</summary>
+      <div class="row"><div><label for="source">المُرسل</label><select id="source"></select></div><div><label for="target">المستقبِل</label><select id="target"></select></div></div>
+      <div class="field"><label for="count">عدد الحزم (1–20)</label><input id="count" type="number" min="1" max="20" value="5"></div>
+      <button class="primary" id="send">▶ إرسال الحزم</button></details>
+    <details open><summary>الوصلة والجهاز</summary>
+      <div class="field"><label for="linkSel">الوصلة المحددة</label><select id="linkSel"></select></div>
+      <div class="row"><div><label for="len">الطول (km)</label><input id="len" type="number" min="0.01" max="20" step="0.01"></div><div><label for="sp">عدد اللحامات</label><input id="sp" type="number" min="0" max="20"></div></div>
+      <div class="field"><label for="fault">حالة الوصلة</label><select id="fault"><option value="ok">سليمة</option><option value="dirty">موصل متسخ (+3 dB)</option><option value="bend">انحناء (+1.5 dB)</option><option value="cut">مقطوعة</option></select></div>
+      <div class="row"><button class="red" id="cut">قطع الوصلة</button><button class="green" id="fix">إعادة الاتصال</button></div>
+      <div class="row"><button id="otdr">🔦 فحص OTDR</button><button id="pm">📶 قياس القدرة</button></div>
+      <div class="row"><button id="tog">تعطيل الجهاز</button><button id="add">➕ إضافة ONT</button></div></details>
+    <details><summary>معايير الليف والسبليتر</summary>
+      <div class="row"><div><label for="fib">نوع الليف / الطول الموجي</label><select id="fib"></select></div><div><label for="rat">نسبة السبليتر</label><select id="rat"><option value="2">1:2</option><option value="4">1:4</option><option value="8">1:8</option><option value="16">1:16</option></select></div></div></details>
+    <details><summary>🎯 سيناريو تدريبي واختبار</summary>
+      <p class="help">يُخفى العطل ويُحدَّد خلال 120 ث. اختر الوصلة من القائمة أعلاه والنوع هنا.</p>
+      <div class="row"><button id="trs">بدء السيناريو</button><div><select id="dg"><option value="cut">قطع</option><option value="dirty">موصل متسخ</option><option value="bend">انحناء</option></select></div></div>
+      <div class="row"><button class="primary" id="trd">تأكيد التشخيص</button><div class="stat"><span>الوقت المتبقي</span><strong id="tm">—</strong></div></div></details>
+    <details open><summary>تذاكر الأعطال (Incidents)</summary><div id="tk" class="list"></div></details>
+    <details><summary>الطرفية (ping · trace · ip · vlan)</summary>
+      <div id="tout" class="term"></div><input id="tin" dir="ltr" placeholder="help" autocomplete="off" autocapitalize="off"></details>
+    <details open><summary>سجل الأحداث</summary><div style="text-align:left"><button id="clear" class="sm">مسح</button> <button id="reset" class="sm">إعادة ضبط</button></div><div id="log" class="list" aria-live="polite"></div></details>
+  </div>
+</aside>
+</div>
+</main>
+<footer>إعداد وتطوير: <b>علي كامل ياسين</b> · فني ألياف ضوئية (FTTH) سابقاً · بكالوريوس إدارة تقنيات المعلومات</footer>
+<script src="app.js"></script>
+</body>
+</html>
