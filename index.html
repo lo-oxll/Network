@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0b1220"><link rel="icon" href="icon-192.png">
 <title>محاكي الشبكات والألياف الضوئية</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -11,12 +12,13 @@
 <div class="tb noprint"><button id="un" aria-label="تراجع">↶ تراجع</button><button id="re" aria-label="إعادة">↷ إعادة</button><button id="hc">◐ تباين</button><button id="hl">❓ جولة</button><button id="th">🌓 المظهر</button><button id="prt">📄 تقرير PDF</button><button id="lg">🌐 EN</button><button id="save">💾 حفظ</button><button id="load">📂 تحميل</button><button id="exp">⬇ تصدير JSON</button><label class="btn">⬆ استيراد<input type="file" id="imp" accept=".json" hidden></label></div></div></header>
 <main>
 <div class="notice"><strong>تنبيه:</strong> هذه محاكاة برمجية تعليمية فقط، وليست فحصاً لشبكة حقيقية. لا تُرسل حزم فعلية، والقيم (زمن الاستجابة، القدرة الضوئية، OTDR، التكاليف) افتراضية محسوبة نظرياً.</div>
+<nav class="tabs noprint" role="tablist" aria-label="الأقسام"><button data-tab="net" role="tab">الشبكة والتحكم</button><button data-tab="fiber" role="tab">الألياف والتشخيص</button><button data-tab="srv" role="tab">الخوادم وOSI</button><button data-tab="sec" role="tab">الأمان وQoS</button><button data-tab="mgmt" role="tab">الإدارة والتقارير</button></nav>
 <div class="layout">
 <section class="panel">
   <div class="heading"><h2>مخطط الشبكة</h2></div>
   <div class="canvas" id="canvas"><svg id="links"></svg></div>
   <div class="body">
-    <div class="stats">
+    <div data-t="net"><div class="stats">
       <div class="stat"><span>الحزم المرسلة</span><strong id="sent">0</strong></div>
       <div class="stat"><span>الحزم الناجحة</span><strong id="succ">0</strong></div>
       <div class="stat"><span>نسبة الفقد</span><strong id="loss">—</strong></div>
@@ -27,25 +29,30 @@
       <div class="stat"><span>MTBF</span><strong id="mtbf">—</strong></div>
       <div class="stat"><span>التذاكر المفتوحة</span><strong id="tko">0</strong></div><div class="stat"><span>Jitter</span><strong id="jit">—</strong></div><div class="stat"><span>Throughput</span><strong id="thr">—</strong></div><div class="stat"><span>الأمان</span><strong id="sec">—</strong></div>
     </div>
-    <hr><strong>ميزانية القدرة الضوئية للمسار المحدد</strong><table id="bud"></table>
+    </div><div data-t="fiber"><hr><strong>ميزانية القدرة الضوئية للمسار المحدد</strong><table id="bud"></table>
     <p class="help">Rx = Tx(+3 dBm) − (طول×التوهين + موصلات 0.5 dB×2 + لحامات 0.1 dB + سبليتر + عطل). الحساسية ‎−27 dBm.</p>
     <hr><strong>التشخيص الميداني (قيم قياسية)</strong><table id="dg2"></table><div id="dgm" class="li"></div>
-    <details><summary>قيم مرجعية قياسية (ITU-T / TIA)</summary><table><tr><td>توهين SM 1310 / 1490 / 1550 nm</td><td>0.35 / 0.25 / 0.22 dB/km</td></tr><tr><td>توهين MM 850 / 1300 nm</td><td>3.0 / 1.0 dB/km</td></tr><tr><td>موصل (حد أقصى)</td><td>0.5 dB</td></tr><tr><td>لحام انصهاري</td><td>≤ 0.1 dB</td></tr><tr><td>سبليتر 1:2 / 1:4 / 1:8 / 1:16</td><td>3.5 / 7.2 / 10.5 / 13.8 dB</td></tr><tr><td>انعكاس UPC / APC</td><td>≤ −50 / ≤ −60 dB</td></tr><tr><td>موصل متسخ</td><td>≈ −35 dB</td></tr><tr><td>طرف مقطوع (Fresnel)</td><td>≈ −14 dB</td></tr><tr><td>GPON B+: Tx OLT</td><td>+1.5 … +5 dBm</td></tr><tr><td>حساسية / تشبع ONT</td><td>−27 / −8 dBm</td></tr><tr><td>أقصى مسافة</td><td>20 km</td></tr></table></details>
+    <hr><strong>قراءات الباور ميتر (طبيعي)</strong><table id="pmv"></table><div id="pmm" class="li"></div>
+    <details><summary>قيم مرجعية قياسية (ITU-T / TIA)</summary><table><tr><td>توهين SM 1310 / 1490 / 1550 nm</td><td>0.35 / 0.25 / 0.22 dB/km</td></tr><tr><td>توهين MM 850 / 1300 nm</td><td>3.0 / 1.0 dB/km</td></tr><tr><td>موصل (حد أقصى)</td><td>0.5 dB</td></tr><tr><td>لحام انصهاري</td><td>≤ 0.1 dB</td></tr><tr><td>سبليتر 1:2 / 1:4 / 1:8 / 1:16</td><td>3.5 / 7.2 / 10.5 / 13.8 dB</td></tr><tr><td>انعكاس UPC / APC</td><td>≤ −50 / ≤ −60 dB</td></tr><tr><td>موصل متسخ</td><td>≈ −35 dB</td></tr><tr><td>طرف مقطوع (Fresnel)</td><td>≈ −14 dB</td></tr><tr><td>GPON B+: Tx OLT</td><td>+1.5 … +5 dBm</td></tr><tr><td>حساسية / تشبع ONT</td><td>−27 / −8 dBm</td></tr><tr><td>قراءة الباور ميتر الطبيعية: مدخل السبليتر / عند ONT</td><td>−4…−11 / −12…−24 dBm</td></tr><tr><td>أقصى مسافة</td><td>20 km</td></tr></table></details>
     <hr><strong>أثر OTDR للوصلة المحددة</strong><canvas id="ot" role="img" aria-label="أثر OTDR" width="600" height="150"></canvas><table id="oev"></table>
-    <hr><strong>زمن الاستجابة (آخر 40 حزمة)</strong><canvas id="lc" role="img" aria-label="زمن الاستجابة" width="600" height="110"></canvas>
-    <hr><strong>مقارنة تكلفة تقديرية (ليف مقابل نحاس)</strong><table id="cost"></table>
-    <hr><strong>GPON وDBA</strong><table id="gp"></table><hr><strong>جدوى الشبكة (CAPEX/OPEX/ROI)</strong><table id="biz"></table><hr><strong>لوحة ODF (كابل 12 ليفاً)</strong><div id="odf" class="odf"></div><p class="help">اسحب الأجهزة لتغيير أماكنها. انقر على جهاز أو خط لتحديده.</p>
+    </div><div data-t="net sec"><hr><strong>زمن الاستجابة (آخر 40 حزمة)</strong><canvas id="lc" role="img" aria-label="زمن الاستجابة" width="600" height="110"></canvas>
+    </div><div data-t="mgmt"><hr><strong>مقارنة تكلفة تقديرية (ليف مقابل نحاس)</strong><table id="cost"></table>
+    </div><div data-t="fiber"><hr><strong>GPON وDBA</strong><table id="gp"></table></div><div data-t="mgmt"><hr><strong>جدوى الشبكة (CAPEX/OPEX/ROI)</strong><table id="biz"></table><hr><strong>لوحة النتائج</strong><div id="sb" class="list"></div></div><div data-t="fiber"><hr><strong>لوحة ODF (كابل 12 ليفاً)</strong><div id="odf" class="odf"></div><hr><strong>خريطة مسار FTTH (مخطط) وقائمة المواد</strong><canvas id="mp" role="img" aria-label="خريطة مسار FTTH" width="600" height="280"></canvas><table id="bom"></table></div><div data-t="srv"><strong>التوجيه الثابت وNAT وSTP</strong><div class="row"><button id="nat">NAT: مفعّل</button><p class="help">STP: الجذر = الراوتر</p></div><table id="rt"></table><hr><strong>الطبقات السبع (OSI) — فحص طبقة بطبقة</strong>
+    <div class="row"><div><label for="svc">الخدمة</label><select id="svc"><option value="web">ويب (HTTP/S)</option><option value="dns">DNS</option><option value="dhcp">DHCP</option><option value="mail">بريد (SMTP)</option><option value="icmp">ping (ICMP)</option></select></div><p class="help">المصدر: «المُرسل» في لوحة التحكم. لـ ping يُستخدم «المستقبِل».</p></div>
+    <table id="osi"></table><div id="osis" class="li"></div>
+    <hr><strong>مهمات الجهاز / الخادم المحدد</strong><div id="srv" class="li"></div>
+    </div><div data-t="net"><p class="help">اسحب الأجهزة لتغيير أماكنها. انقر على جهاز أو خط لتحديده.</p></div>
   </div>
 </section>
 <aside class="panel noprint">
   <div class="heading"><h2>لوحة التحكم</h2></div>
   <div class="body">
     <div id="status"></div>
-    <details open><summary>إرسال الحزم</summary>
+    <details open data-t="net"><summary>إرسال الحزم</summary>
       <div class="row"><div><label for="source">المُرسل</label><select id="source"></select></div><div><label for="target">المستقبِل</label><select id="target"></select></div></div>
       <div class="field"><label for="count">عدد الحزم (1–20)</label><input id="count" type="number" min="1" max="20" value="5"></div>
       <button class="primary" id="send">▶ إرسال الحزم</button></details>
-    <details open><summary>الوصلة والجهاز</summary>
+    <details open data-t="net fiber"><summary>الوصلة والجهاز</summary>
       <div class="field"><label for="linkSel">الوصلة المحددة</label><select id="linkSel"></select></div>
       <div class="row"><div><label for="len">الطول (km)</label><input id="len" type="number" min="0.01" max="20" step="0.01"></div><div><label for="sp">عدد اللحامات</label><input id="sp" type="number" min="0" max="20"></div></div>
       <div class="row"><div><label for="col">لون الليف</label><select id="col"></select></div><div><label for="odfs">عبر ODF/FDB</label><select id="odfs"><option value="0">مباشر</option><option value="1">عبر ODF (+1 dB)</option></select></div></div>
@@ -53,18 +60,18 @@
       <div class="row"><button class="red" id="cut">قطع الوصلة</button><button class="green" id="fix">إعادة الاتصال</button></div>
       <div class="row"><button id="otdr">🔦 فحص OTDR</button><button id="pm">📶 قياس القدرة</button></div>
       <div class="row"><button id="tog">تعطيل الجهاز</button><button id="add">➕ إضافة ONT</button></div></details>
-    <details><summary>معايير الليف والسبليتر</summary>
-      <div class="row"><div><label for="fib">نوع الليف / الطول الموجي</label><select id="fib"></select></div><div><label for="rat">نسبة السبليتر</label><select id="rat"><option value="2">1:2</option><option value="4">1:4</option><option value="8">1:8</option><option value="16">1:16</option></select></div></div><div class="row"><div><label for="c_tx">Tx للـ OLT (dBm)</label><input id="c_tx" type="number" step="0.1"></div><div><label for="c_sens">حساسية ONT (dBm)</label><input id="c_sens" type="number" step="0.1"></div></div><div class="row"><div><label for="c_ovl">نقطة التشبع (dBm)</label><input id="c_ovl" type="number" step="0.1"></div><p class="help">أدخل قيم ورقة مواصفات معداتك.</p></div></details>
-    <details><summary>🎯 سيناريو تدريبي واختبار</summary>
+    <details data-t="fiber"><summary>معايير الليف والسبليتر</summary>
+      <div class="row"><div><label for="fib">نوع الليف / الطول الموجي</label><select id="fib"></select></div><div><label for="rat">نسبة السبليتر</label><select id="rat"><option value="2">1:2</option><option value="4">1:4</option><option value="8">1:8</option><option value="16">1:16</option></select></div></div><div class="row"><div><label for="c_tx">Tx للـ OLT (dBm)</label><input id="c_tx" type="number" step="0.1"></div><div><label for="c_sens">حساسية ONT (dBm)</label><input id="c_sens" type="number" step="0.1"></div></div><div class="row"><div><label for="c_ovl">نقطة التشبع (dBm)</label><input id="c_ovl" type="number" step="0.1"></div><p class="help">أدخل قيم ورقة مواصفات معداتك.</p></div><div class="row"><div><label for="wdm">التعايش WDM</label><select id="wdm"><option value="0">بدون</option><option value="1">GPON+XGS (‎+1.5 dB)</option></select></div><div></div></div></details>
+    <details data-t="mgmt"><summary>🎯 سيناريو تدريبي واختبار</summary>
       <p class="help">يُخفى العطل ويُحدَّد خلال 120 ث. اختر الوصلة من القائمة أعلاه والنوع هنا.</p>
       <div class="row"><button id="trs">بدء السيناريو</button><div><select id="dg"><option value="cut">قطع</option><option value="dirty">موصل متسخ</option><option value="bend">انحناء</option></select></div></div>
       <div class="row"><button id="exs">اختبار كامل (5 أعطال)</button><button id="cert">🎓 شهادة PDF</button></div><div class="field"><label for="nm">اسم المتدرب</label><input id="nm" value="علي كامل ياسين"></div><div class="row"><button class="primary" id="trd">تأكيد التشخيص</button><div class="stat"><span>الوقت المتبقي</span><strong id="tm">—</strong></div></div></details>
-    <details><summary>GPON وDBA والجدوى</summary><div class="row"><div><label for="bw">عرض النطاق المتعاقد للجهاز المحدد (Mbps)</label><input id="bw" type="number" min="10" max="1000"></div><div><label for="dba">DBA</label><select id="dba"><option value="1">مفعّل</option><option value="0">معطّل</option></select></div></div><div class="row"><div><label for="fee">الاشتراك الشهري ($)</label><input id="fee" type="number" min="1"></div><div><label for="opx">OPEX لكل km ($/شهر)</label><input id="opx" type="number" min="0"></div></div></details>
-    <details><summary>الأمان وQoS</summary><div class="field"><label for="qos">فئة الحركة</label><select id="qos"><option value="v">صوت (أولوية عالية)</option><option value="vi">فيديو</option><option value="d" selected>بيانات</option></select></div><div class="row"><div><label for="as">المصدر</label><select id="as"></select></div><div><label for="ad">الوجهة</label><select id="ad"></select></div></div><div class="row"><button id="aa">+ قاعدة حظر ACL</button><button id="fw">جدار ناري: معطّل</button></div><button id="atk" class="red">⚠ هجوم ONT مارق</button><div id="acl" class="list"></div></details>
-    <details><summary>🛠 سيناريوهات ميدانية</summary><div class="field"><label for="fs">البلاغ</label><select id="fs"><option value="0">انقطاع بعد أعمال حفر</option><option value="1">بطء بعد صيانة صندوق التوزيع</option><option value="2">إشارة ضعيفة عند مشترك بعيد</option></select></div><button id="fsb" class="primary">بدء البلاغ</button></details>
-    <details><summary>الافتراضات والحدود</summary><ul class="help"><li>النموذج: GPON بطول موجي 1310 nm صاعداً و1490 nm هابطاً، ويُعتمد الأسوأ.</li><li>قيم التوهين والموصلات واللحامات نموذجية، مع تفاوت ثابت لكل وصلة (موصل ±0.1 dB، لحام ±0.03 dB).</li><li>لا تُحاكى: التشتت، الاستقطاب، BER، المنطقة العمياء في OTDR.</li><li>قيم Tx والحساسية والتشبع قابلة للتعديل لإدخال مواصفات معداتك الفعلية.</li><li>النتائج تعليمية وليست بديلاً عن القياس الميداني.</li></ul></details>
-    <details open><summary>تذاكر الأعطال (Incidents)</summary><div id="tk" class="list"></div></details>
-    <details><summary>الطرفية (ping · trace · ip · vlan)</summary>
+    <details data-t="fiber mgmt"><summary>GPON وDBA والجدوى</summary><div class="row"><div><label for="bw">عرض النطاق المتعاقد للجهاز المحدد (Mbps)</label><input id="bw" type="number" min="10" max="1000"></div><div><label for="dba">DBA</label><select id="dba"><option value="1">مفعّل</option><option value="0">معطّل</option></select></div></div><div class="row"><div><label for="fee">الاشتراك الشهري ($)</label><input id="fee" type="number" min="1"></div><div><label for="opx">OPEX لكل km ($/شهر)</label><input id="opx" type="number" min="0"></div></div></details>
+    <details data-t="sec"><summary>الأمان وQoS</summary><div class="field"><label for="qos">فئة الحركة</label><select id="qos"><option value="v">صوت (أولوية عالية)</option><option value="vi">فيديو</option><option value="d" selected>بيانات</option></select></div><div class="row"><div><label for="as">المصدر</label><select id="as"></select></div><div><label for="ad">الوجهة</label><select id="ad"></select></div></div><div class="row"><button id="aa">+ قاعدة حظر ACL</button><button id="fw">جدار ناري: معطّل</button></div><button id="atk" class="red">⚠ هجوم ONT مارق</button><div id="acl" class="list"></div></details>
+    <details data-t="mgmt"><summary>🛠 سيناريوهات ميدانية</summary><div class="field"><label for="fs">البلاغ</label><select id="fs"><option value="0">انقطاع بعد أعمال حفر</option><option value="1">بطء بعد صيانة صندوق التوزيع</option><option value="2">إشارة ضعيفة عند مشترك بعيد</option></select></div><button id="fsb" class="primary">بدء البلاغ</button> <label class="btn">استيراد سيناريو JSON<input type="file" id="fsi" accept=".json" hidden></label></details>
+    <details data-t="fiber"><summary>الافتراضات والحدود</summary><ul class="help"><li>النموذج: GPON بطول موجي 1310 nm صاعداً و1490 nm هابطاً، ويُعتمد الأسوأ.</li><li>قيم التوهين والموصلات واللحامات نموذجية، مع تفاوت ثابت لكل وصلة (موصل ±0.1 dB، لحام ±0.03 dB).</li><li>لا تُحاكى: التشتت، الاستقطاب، BER، المنطقة العمياء في OTDR.</li><li>قيم Tx والحساسية والتشبع قابلة للتعديل لإدخال مواصفات معداتك الفعلية.</li><li>النتائج تعليمية وليست بديلاً عن القياس الميداني.</li></ul></details>
+    <details open data-t="mgmt"><summary>تذاكر الأعطال (Incidents)</summary><div id="tk" class="list"></div></details>
+    <details data-t="srv"><summary>الطرفية (ping · trace · ip · vlan · nslookup · dhcp · curl)</summary>
       <div id="tout" class="term"></div><input id="tin" dir="ltr" placeholder="help" autocomplete="off" autocapitalize="off"></details>
     <details open><summary>سجل الأحداث</summary><div style="text-align:left"><button id="clear" class="sm">مسح</button> <button id="reset" class="sm">إعادة ضبط</button></div><div id="log" class="list" aria-live="polite"></div></details>
   </div>
@@ -72,6 +79,7 @@
 </div>
 </main>
 <div id="tour" class="tour" hidden role="dialog" aria-modal="true" aria-labelledby="tt"><div class="box"><h3 id="tt"></h3><p id="tp"></p><div class="row"><button id="tn" class="primary">التالي</button><button id="tx">تخطي</button></div></div></div>
+<script>if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{})</script>
 <script src="engine.js"></script><script src="pdf.js"></script><script src="i18n.js"></script><script src="app.js"></script>
 </body>
 </html>

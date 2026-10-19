@@ -29,3 +29,15 @@ test('PDF: valid xref offsets',async()=>{
   rows.forEach((r,i)=>assert.ok(t.slice(+r.slice(0,10)).startsWith(`${i+1} 0 obj`)));
 });
 test('i18n translates',()=>{assert.equal(TT('حفظ'),'Save');assert.ok(!/[\u0600-\u06FF]/.test(TT('لا يصل ضوء'))||true)});
+test('validate: server IP format',()=>{const o=good();o.N.dns={n:'DNS',e:'DNS',x:10,y:10,ip:'192.168.1.11'};o.on.dns=true;assert.deepEqual(E.validate(o),[]);o.N.dns.ip='<x>';assert.ok(E.validate(o).length)});
+test('BER: ~1e-10 at sensitivity, monotonic',()=>{const b0=E.ber(0);assert.ok(b0>1e-12&&b0<1e-8,String(b0));assert.ok(E.ber(-1)>b0&&E.ber(3)<b0);assert.equal(E.fmtBer(1e-20),'<1e-15')});
+test('XGS-PON uses 1270 up / 1577 down',()=>{assert.equal(E.DIR.XGS.u,'XGU');assert.ok(E.FIB.XGD[1]<E.FIB.XGU[1])});
+test('validateScenario',()=>{const k=['spl-pc1'],ok={title:'t',complaint:'c',setup:{len:2,sp:1},fault:{link:'spl-pc1',type:'bend'}};
+  assert.deepEqual(E.validateScenario(ok,k),[]);assert.ok(E.validateScenario({...ok,fault:{link:'x',type:'bend'}},k).length);
+  assert.ok(E.validateScenario({...ok,setup:{len:999}},k).length);assert.ok(E.validateScenario(null,k).length)});
+test('meterVerdict: field windows (-11..-4 feeder, -24..-12 ONT)',()=>{
+  const v=(f,o,fs='ok',os='ok')=>E.meterVerdict({s:fs,rx:f},{s:os,rx:o});
+  assert.equal(v(-6,-15),'ok');assert.equal(v(-11,-24),'ok');assert.equal(v(-4,-12),'ok');
+  assert.equal(v(-13,-20),'feeder_low');assert.equal(v(-2,-15),'feeder_high');assert.equal(v(-6,-26),'drop_low');assert.equal(v(-6,-10),'ont_high');
+  assert.equal(v(-6,-15,'down'),'los_feeder');assert.equal(v(-6,-15,'ok','down'),'los_drop');
+});

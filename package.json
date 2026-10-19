@@ -1,2 +1,11 @@
-{"name":"netsim","version":"2.0.0","private":true,"description":"FTTH / network educational simulator","license":"MIT",
-"scripts":{"test":"node --test","check":"node --check engine.js && node --check pdf.js && node --check i18n.js && node --check app.js"}}
+{
+ "name": "netsim",
+ "version": "2.2.0",
+ "private": true,
+ "description": "FTTH / network educational simulator",
+ "license": "MIT",
+ "scripts": {
+  "test": "node --test",
+  "check": "node --check engine.js && node --check pdf.js && node --check i18n.js && node --check app.js && node --check sw.js"
+ }
+}

@@ -1,6 +1,7 @@
 (function(r,f){if(typeof module==='object')module.exports=f();else r.Engine=f()})(this,function(){
 const VERSION=2;
-const FIB={GPON:['GPON (1310 nm ↑ / 1490 nm ↓)',.35],SM1310:['SM 1310 nm',.35],SM1490:['SM 1490 nm',.25],SM1550:['SM 1550 nm',.22],MM850:['MM 850 nm',3],MM1300:['MM 1300 nm',1]};
+const FIB={GPON:['GPON (1310 nm ↑ / 1490 nm ↓)',.35],SM1310:['SM 1310 nm',.35],SM1490:['SM 1490 nm',.25],SM1550:['SM 1550 nm',.22],MM850:['MM 850 nm',3],MM1300:['MM 1300 nm',1],XGS:['XGS-PON (1270 nm ↑ / 1577 nm ↓)',.4],XGU:['SM 1270 nm',.4],XGD:['SM 1577 nm',.22]};
+const DIR={GPON:{u:'SM1310',d:'SM1490'},XGS:{u:'XGU',d:'XGD'}};
 const SPL={2:3.5,4:7.2,8:10.5,16:13.8};
 /* link loss (dB): fiber + 2 connectors (±tolerance) + splices (±tolerance) + ODF + fault */
 const linkLoss=(l,a,nf)=>l.len*a+1+(l.tc||0)*2+l.sp*(.1+(l.ts||0))+(l.odf?1:0)+({dirty:3,bend:1.5}[nf?'':l.f]||0);
@@ -8,7 +9,7 @@ const state=({down,fo,far,m,ov})=>down?'down':fo&&(m<0||far)?'fail':fo&&(m<3||ov
 const diagnose=({down,fo,far,ex,ov,m})=>down?'los':!fo?'copper':far?'far':ex>=2.5?'dirty':ex>=1?'bend':ov?'ov':m<3?'weak':'ok';
 function migrate(o){
   if(!o||typeof o!=='object')return o;
-  const c=Object.assign({tx:3,sens:-27,ovl:-8},o.cfg||{});
+  const c=Object.assign({tx:3,sens:-27,ovl:-8,wdm:0},o.cfg||{});
   if(!o.ver||o.ver<2){if(c.fib==='SM1310')c.fib='GPON'}
   return Object.assign({},o,{cfg:c,ver:VERSION});
 }
@@ -18,7 +19,7 @@ function validate(o){
   if(!o.N||typeof o.N!=='object'||!o.L||typeof o.L!=='object'||!o.on||!o.v||!o.cfg)return['حقول مطلوبة ناقصة'];
   const ids=Object.keys(o.N);
   if(!ids.length||ids.length>40)e.push('عدد الأجهزة غير صالح');
-  ids.forEach(k=>{const n=o.N[k];if(!/^[a-z][a-z0-9]*$/i.test(k)||!n||typeof n.n!=='string'||n.n.length>40||typeof n.e!=='string'||!isN(n.x)||!isN(n.y))e.push('جهاز غير صالح: '+k)});
+  ids.forEach(k=>{const n=o.N[k];if(!/^[a-z][a-z0-9]*$/i.test(k)||!n||typeof n.n!=='string'||n.n.length>40||typeof n.e!=='string'||!isN(n.x)||!isN(n.y)||(n.ip&&!/^(\d{1,3}\.){3}\d{1,3}$/.test(n.ip)))e.push('جهاز غير صالح: '+k)});
   Object.entries(o.L).forEach(([k,l])=>{
     if(!l||!o.N[l.a]||!o.N[l.b])return e.push('وصلة بأطراف مجهولة: '+k);
     if(!['cu','fo'].includes(l.t))e.push('نوع وصلة غير صالح: '+k);
@@ -34,5 +35,25 @@ function validate(o){
   if(o.T&&!(Array.isArray(o.T)&&o.T.every(t=>t&&Number.isInteger(t.id)&&['open','work','closed'].includes(t.s)&&typeof t.d==='string'&&typeof t.k==='string')))e.push('تذاكر غير صالحة');
   return e;
 }
-return{VERSION,FIB,SPL,linkLoss,state,diagnose,migrate,validate};
+/* normal field power-meter windows (dBm): main cable at splitter input, and at the ONT */
+const WIN={feeder:[-11,-4],ont:[-24,-12]};
+function meterVerdict(f,o){
+  if(f.s==='down')return'los_feeder';if(o.s==='down')return'los_drop';
+  if(f.rx<WIN.feeder[0])return'feeder_low';if(f.rx>WIN.feeder[1])return'feeder_high';
+  if(o.rx<WIN.ont[0])return'drop_low';if(o.rx>WIN.ont[1])return'ont_high';return'ok';
+}
+const erfc=z=>{const t=1/(1+.5*z);return t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(.37409196+t*(.09678418+t*(-.18628806+t*(.27886807+t*(-1.13520398+t*(1.48851587+t*(-.82215223+t*.17087277)))))))))};
+/* BER model: Q = 6.36 (BER 1e-10) at receiver sensitivity, scaling linearly with received power */
+const ber=m=>.5*erfc(6.36*Math.pow(10,m/10)/Math.SQRT2);
+const fmtBer=b=>b<1e-15?'<1e-15':b.toExponential(1);
+function validateScenario(o,keys){
+  if(!o||typeof o!=='object'||Array.isArray(o))return['سيناريو غير صالح'];const e=[];
+  if(typeof o.title!=='string'||!o.title||o.title.length>60)e.push('عنوان غير صالح');
+  if(o.complaint!==undefined&&(typeof o.complaint!=='string'||o.complaint.length>200))e.push('نص البلاغ غير صالح');
+  const f=o.fault;if(!f||!keys.includes(f.link)||!['cut','dirty','bend'].includes(f.type))e.push('العطل غير صالح');
+  const s=o.setup||{};if(s.len!==undefined&&!(+s.len>=.01&&+s.len<=100))e.push('طول غير صالح');
+  if(s.sp!==undefined&&!(Number.isInteger(+s.sp)&&s.sp>=0&&s.sp<=50))e.push('لحامات غير صالحة');
+  return e;
+}
+return{VERSION,FIB,SPL,DIR,WIN,meterVerdict,linkLoss,state,diagnose,migrate,validate,ber,fmtBer,validateScenario};
 });
