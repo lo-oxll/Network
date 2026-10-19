@@ -2,16 +2,15 @@
 const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg',KEY='netsim-v2';
 const css=p=>getComputedStyle(document.documentElement).getPropertyValue(p).trim();
 const esc=s=>String(s).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
-const FIB={SM1310:['SM 1310 nm',.35],SM1490:['SM 1490 nm',.25],SM1550:['SM 1550 nm',.22],MM850:['MM 850 nm',3],MM1300:['MM 1300 nm',1]};
-const SPL={2:3.5,4:7.2,8:10.5,16:13.8};
+const{FIB,SPL}=Engine;
 const FT={cut:'قطع',dirty:'موصل متسخ',bend:'انحناء'},ST={open:'مفتوح',work:'قيد المعالجة',closed:'مغلق'};
 const base=()=>{
   const N={router:{n:'الراوتر',e:'Router',i:'📡',x:50,y:12},switch:{n:'السويتش / OLT',e:'Switch · OLT',i:'🔀',x:50,y:38},spl:{n:'سبليتر',e:'Splitter',i:'🔱',x:50,y:63},
     pc1:{n:'حاسوب 1',e:'ONT-01',i:'💻',x:18,y:88},pc2:{n:'حاسوب 2',e:'ONT-02',i:'🖥️',x:50,y:88},pc3:{n:'حاسوب 3',e:'ONT-03',i:'🖥️',x:82,y:88}};
   const on={};Object.keys(N).forEach(k=>on[k]=true);
-  const lk=(a,b,t,len,sp)=>({a,b,t,len,sp,f:'ok',fp:.5});
-  return{N,on,L:{'router-switch':lk('router','switch','cu',.01,0),'switch-spl':lk('switch','spl','fo',5,1),'spl-pc1':lk('spl','pc1','fo',.3,0),'spl-pc2':lk('spl','pc2','fo',.3,0),'spl-pc3':lk('spl','pc3','fo',.3,0)},
-    v:{pc1:10,pc2:10,pc3:20},T:[],st:{sent:0,succ:0,latS:0,latN:0},h:[],acl:[],fw:0,atk:null,ex:null,dba:1,bw:{pc1:100,pc2:100,pc3:100},biz:{fee:25,opex:40},cfg:{fib:'SM1310',ratio:4},t0:Date.now(),tr:null};
+  const lk=(a,b,t,len,sp)=>({a,b,t,len,sp,f:'ok',fp:.5,tc:+((Math.random()-.5)*.2).toFixed(3),ts:+((Math.random()-.5)*.06).toFixed(3)});
+  return{N,on,L:{'router-switch':lk('router','switch','cu',.01,0),'switch-spl':lk('switch','spl','fo',10,1),'spl-pc1':lk('spl','pc1','fo',.3,0),'spl-pc2':lk('spl','pc2','fo',.3,0),'spl-pc3':lk('spl','pc3','fo',.3,0)},
+    v:{pc1:10,pc2:10,pc3:20},T:[],st:{sent:0,succ:0,latS:0,latN:0},h:[],acl:[],fw:0,atk:null,ex:null,dba:1,bw:{pc1:100,pc2:100,pc3:100},biz:{fee:25,opex:40},cfg:{fib:'GPON',ratio:4,tx:3,sens:-27,ovl:-8},t0:Date.now(),tr:null};
 };
 let S=base(),selN='pc1',selL='switch-spl',busy=false;
 const canvas=$('canvas'),svg=$('links'),el={};
@@ -28,23 +27,28 @@ function path(a,b){
 }
 const hub=(a,b,h)=>[...path(a,h),...path(h,b).slice(1)];
 const route=(a,b)=>S.v[a]&&S.v[b]?hub(a,b,S.v[a]===S.v[b]?'switch':'router'):path(a,b);
-function ev(p,nf){
-  let loss=0,len=0,fo=0,down=p.some(n=>!S.on[n]);
+function ev1(p,nf,fk){
+  const{tx,sens,ovl}=S.cfg;let loss=0,len=0,fo=0,down=p.some(n=>!S.on[n]);
   for(let i=0;i<p.length-1;i++){
     const l=S.L[linkKey(p[i],p[i+1])];if(!l){down=1;continue}
     if(l.f==='cut'&&!nf)down=1;len+=l.len;
-    if(l.t==='fo'){fo=1;loss+=l.len*att()+1+l.sp*.1+(l.odf?1:0)+({dirty:3,bend:1.5}[nf?'':l.f]||0)}
+    if(l.t==='fo'){fo=1;loss+=Engine.linkLoss(l,FIB[fk][1],nf)}
   }
   if(fo)loss+=p.slice(1,-1).filter(x=>x==='spl').length*SPL[S.cfg.ratio];
-  const m=fo?30-loss:null,far=p.some(n=>S.v[n]&&dist(n)>20);
-  return{s:down?'down':fo&&(m<0||far)?'fail':fo&&(m<3||3-loss>-8)?'warn':'ok',loss,len,fo,rx:3-loss,ov:fo&&3-loss>-8,m,base:(p.length-1)*.4+len*.02};
+  const rx=tx-loss,m=fo?rx-sens:null,ov=!!(fo&&rx>ovl),far=p.some(n=>S.v[n]&&dist(n)>20);
+  return{s:Engine.state({down,fo,far,m,ov}),loss,len,fo,rx,ov,m,base:(p.length-1)*.4+len*.02};
+}
+function ev(p,nf){
+  if(S.cfg.fib!=='GPON')return ev1(p,nf,S.cfg.fib);
+  const u=ev1(p,nf,'SM1310'),d=ev1(p,nf,'SM1490'),w=(u.m!=null&&d.m!=null&&d.m<u.m)?d:u;
+  return{...w,s:['down','fail','warn','ok'].find(x=>u.s===x||d.s===x),up:u,dn:d};
 }
 function center(id){const c=canvas.getBoundingClientRect(),r=el[id].getBoundingClientRect();return{x:r.left-c.left+r.width/2,y:r.top-c.top+r.height/2}}
 function build(){
   canvas.querySelectorAll('.node').forEach(n=>n.remove());Object.keys(el).forEach(k=>delete el[k]);
   Object.entries(S.N).forEach(([id,n])=>{
     const d=document.createElement('div'),i=document.createElement('span'),s=document.createElement('strong');
-    d.className='node';i.className='i';i.textContent=n.i;s.textContent=n.n;d.append(i,s,document.createElement('small'));
+    d.className='node';d.tabIndex=0;d.setAttribute('role','button');d.setAttribute('aria-label',n.n);i.className='i';i.textContent=n.i;s.textContent=n.n;d.append(i,s,document.createElement('small'));
     d.style.left=n.x+'%';d.style.top=n.y+'%';canvas.append(d);el[id]=d;bind(d,id);
   });
   fill();
@@ -75,13 +79,13 @@ function budget(){
   $('bud').innerHTML=`<tr><td>المسار</td><td style="direction:rtl">${esc(p.map(n=>S.N[n].n).join(' ← '))}</td></tr>
   <tr><td>الليف</td><td>${FIB[S.cfg.fib][0]}</td></tr><tr><td>الطول الكلي</td><td>${e.len.toFixed(2)} km</td></tr>
   <tr><td>التوهين الكلي</td><td>${f(e.loss.toFixed(2)+' dB')}</td></tr><tr><td>قدرة الاستقبال Rx</td><td>${f(e.rx.toFixed(2)+' dBm')}</td></tr>
-  <tr><td>هامش القدرة</td><td>${f(e.fo&&e.m.toFixed(2)+' dB')}</td></tr>
+  ${e.up?`<tr><td>Rx هابط (1490)</td><td>${e.dn.rx.toFixed(2)} dBm</td></tr><tr><td>Rx صاعد (1310)</td><td>${e.up.rx.toFixed(2)} dBm</td></tr>`:''}<tr><td>هامش القدرة</td><td>${f(e.fo&&e.m.toFixed(2)+' dB')}</td></tr>
   <tr><td>حالة المسار</td><td style="direction:rtl">${{ok:'سليم ✔',warn:e.ov?'تشبع المستقبل (Rx > −8 dBm) ⚠':'هامش ضعيف ⚠',fail:'فشل: Rx أقل من الحساسية ✘',down:'منقطع ✘'}[e.s]}</td></tr>`;
 }
 function otdr(){
   const l=S.L[selL],c=$('ot'),g=c.getContext('2d'),w=c.width,h=c.height;
   g.clearRect(0,0,w,h);g.font='11px Tahoma';g.fillStyle=css('--muted');
-  if(l.t!=='fo'){g.fillText('OTDR للألياف الضوئية فقط',12,22);return}
+  if(l.t!=='fo'){g.fillText(lang==='en'?'OTDR applies to fiber links only':'OTDR للألياف الضوئية فقط',12,22);return}
   const a=att(),E=[[0,.5,1]];
   for(let i=1;i<=l.sp;i++)E.push([l.len*i/(l.sp+1),.1,0]);
   if(l.f==='dirty')E.push([0,3,1]);
@@ -117,7 +121,7 @@ function tickets(){
 }
 function tkOpen(k,d){if(!S.T.some(t=>t.k===k&&t.s!=='closed'))S.T.push({id:S.T.length+1,k,d,s:'open',o:Date.now()})}
 function tkClose(k){S.T.filter(t=>t.k===k&&t.s!=='closed').forEach(t=>{t.s='closed';t.c=Date.now()})}
-function update(){
+function update(){hist();
   S.N.spl.n='سبليتر 1:'+S.cfg.ratio;
   Object.keys(el).forEach(id=>{
     el[id].classList.toggle('off',!S.on[id]);el[id].classList.toggle('sel',id===selN);
@@ -252,17 +256,17 @@ $('rat').onchange=e=>{
 $('clear').onclick=()=>$('log').replaceChildren();
 $('reset').onclick=()=>{S=base();selN='pc1';selL='switch-spl';build();$('log').replaceChildren();log('إعادة ضبط','عادت الشبكة والإحصاءات إلى الحالة الافتراضية.',true);update()};
 /* persistence */
-const snap=()=>JSON.stringify({...S,tr:null});
+const snap=()=>JSON.stringify({...S,tr:null,ver:Engine.VERSION});
 function load(o){
-  if(!o||!o.N||!o.L||!o.on||!o.v)throw 0;
+  o=Engine.migrate(o);const er=Engine.validate(o);if(er.length)throw new Error(er[0]);
   S=Object.assign(base(),o,{tr:null});
   Object.values(S.L).forEach(l=>{l.len=+l.len||.01;l.sp=+l.sp||0;l.fp=+l.fp||.5});
-  selL=Object.keys(S.L)[1]||Object.keys(S.L)[0];selN=Object.keys(S.v)[0]||'router';build();log('تحميل','تم تحميل الطوبولوجيا.',true);update();
+  S.dba=+S.dba?1:0;S.fw=+S.fw?1:0;S.biz.fee=+S.biz.fee||25;S.biz.opex=+S.biz.opex||0;selL=Object.keys(S.L)[1]||Object.keys(S.L)[0];selN=Object.keys(S.v)[0]||'router';build();log('تحميل','تم تحميل الطوبولوجيا.',true);update();
 }
-$('save').onclick=()=>{try{localStorage.setItem(KEY,snap());log('حفظ','حُفظت الطوبولوجيا في المتصفح.',true)}catch{log('حفظ','التخزين غير متاح.',false)}};
-$('load').onclick=()=>{try{const j=localStorage.getItem(KEY);j?load(JSON.parse(j)):log('تحميل','لا توجد نسخة محفوظة.',false)}catch{log('تحميل','تعذّر التحميل.',false)}};
+$('save').onclick=()=>{try{localStorage.setItem(KEY,snap());log('حفظ','حُفظت الطوبولوجيا في المتصفح.',true)}catch(e){log('حفظ','تعذّر الحفظ: '+e.message,false)}};
+$('load').onclick=()=>{try{const j=localStorage.getItem(KEY);j?load(JSON.parse(j)):log('تحميل','لا توجد نسخة محفوظة.',false)}catch(e){log('تحميل','تعذّر التحميل: '+e.message,false)}};
 $('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([snap()],{type:'application/json'}));a.download='network-topology.json';a.click();URL.revokeObjectURL(a.href)};
-$('imp').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(t=>load(JSON.parse(t))).catch(()=>log('استيراد','ملف غير صالح.',false));e.target.value=''};
+$('imp').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(t=>load(JSON.parse(t))).catch(e=>log('استيراد','ملف غير صالح: '+e.message,false));e.target.value=''};
 /* theme + print */
 $('th').onclick=()=>{const d=document.documentElement,c=d.dataset.theme||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');d.dataset.theme=c==='light'?'dark':'light';update()};
 $('prt').onclick=()=>dl(pdf([report()]),'network-report.pdf');
@@ -272,6 +276,9 @@ addEventListener('afterprint',()=>{pt?document.documentElement.dataset.theme=pt:
 function bind(d,id){
   let g=null;
   d.addEventListener('click',()=>{selN=id;update()});
+  d.addEventListener('keydown',e=>{const m={ArrowLeft:[-2,0],ArrowRight:[2,0],ArrowUp:[0,-2],ArrowDown:[0,2]}[e.key];
+    if(e.key==='Enter'||e.key===' '){e.preventDefault();selN=id;update()}
+    else if(m){e.preventDefault();const n=S.N[id];n.x=Math.max(9,Math.min(91,n.x+m[0]));n.y=Math.max(11,Math.min(89,n.y+m[1]));d.style.left=n.x+'%';d.style.top=n.y+'%';selN=id;update()}});
   d.addEventListener('pointerdown',e=>{if(e.button!==0)return;g={x:e.clientX,y:e.clientY,l:S.N[id].x,t:S.N[id].y,m:false};d.setPointerCapture(e.pointerId)});
   d.addEventListener('pointermove',e=>{
     if(!g)return;const c=canvas.getBoundingClientRect(),dx=(e.clientX-g.x)/c.width*100,dy=(e.clientY-g.y)/c.height*100;
@@ -284,8 +291,7 @@ function bind(d,id){
 addEventListener('resize',draw);
 /* ===== extensions: ODF, GPON/DBA, QoS, security, ROI, exam, PDF, i18n ===== */
 const COL=[['أزرق','#2b6cff'],['برتقالي','#ff8a1f'],['أخضر','#22b55b'],['بني','#8b5a2b'],['رمادي','#8a96a8'],['أبيض','#f4f4f4'],['أحمر','#e03131'],['أسود','#222'],['أصفر','#f2d600'],['بنفسجي','#9b59d0'],['وردي','#ff7eb6'],['تركوازي','#19c3d6']];
-const DARK=[0,3,6,7,9],EN={"محاكي الشبكات والألياف الضوئية (FTTH)": "FTTH Network & Fiber Simulator", "ميزانية القدرة، OTDR، تذاكر الأعطال، مؤشرات SLA، VLAN وطرفية أوامر.": "Power budget, OTDR, incident tickets, SLA KPIs, VLAN and CLI terminal.", "المظهر": "Theme", "تقرير PDF": "PDF report", "حفظ": "Save", "تحميل": "Load", "تصدير JSON": "Export JSON", "استيراد": "Import", "تنبيه:": "Notice:", "هذه محاكاة برمجية تعليمية فقط، وليست فحصاً لشبكة حقيقية. لا تُرسل حزم فعلية، والقيم (زمن الاستجابة، القدرة الضوئية، OTDR، التكاليف) افتراضية محسوبة نظرياً.": "This is an educational software simulation only, not a scan of a real network. No real packets are sent; all values (latency, optical power, OTDR, costs) are theoretical.", "مخطط الشبكة": "Network Diagram", "الحزم المرسلة": "Packets sent", "الحزم الناجحة": "Packets OK", "نسبة الفقد": "Loss rate", "متوسط الاستجابة": "Avg latency", "التوافر": "Availability", "التذاكر المفتوحة": "Open tickets", "الأمان": "Security", "ميزانية القدرة الضوئية للمسار المحدد": "Optical power budget (selected path)", "أثر OTDR للوصلة المحددة": "OTDR trace (selected link)", "زمن الاستجابة (آخر 40 حزمة)": "Latency (last 40 packets)", "مقارنة تكلفة تقديرية (ليف مقابل نحاس)": "Estimated cost: fiber vs copper", "لوحة ODF (كابل 12 ليفاً)": "ODF panel (12-fiber cable)", "جدوى الشبكة (CAPEX/OPEX/ROI)": "Network economics (CAPEX/OPEX/ROI)", "لوحة التحكم": "Control Panel", "إرسال الحزم": "Send packets", "المُرسل": "Source", "المستقبِل": "Target", "عدد الحزم (1–20)": "Packets (1–20)", "الوصلة والجهاز": "Link & device", "الوصلة المحددة": "Selected link", "الطول (km)": "Length (km)", "عدد اللحامات": "Splices", "لون الليف": "Fiber color", "عبر ODF/FDB": "Via ODF/FDB", "مباشر": "Direct", "حالة الوصلة": "Link state", "سليمة": "Healthy", "موصل متسخ": "Dirty connector", "انحناء": "Bend", "مقطوعة": "Cut", "قطع الوصلة": "Cut link", "إعادة الاتصال": "Restore", "فحص OTDR": "OTDR test", "قياس القدرة": "Power meter", "تعطيل": "Disable", "تفعيل": "Enable", "إضافة ONT": "Add ONT", "معايير الليف والسبليتر": "Fiber & splitter", "نوع الليف / الطول الموجي": "Fiber / wavelength", "نسبة السبليتر": "Splitter ratio", "GPON وDBA": "GPON & DBA", "عرض النطاق المتعاقد للجهاز المحدد (Mbps)": "Contracted bandwidth, selected device (Mbps)", "مفعّل": "Enabled", "معطّل": "Disabled", "الاشتراك الشهري ($)": "Monthly fee ($)", "OPEX لكل km ($/شهر)": "OPEX per km ($/month)", "المسافة": "Distance", "المتعاقد": "Contracted", "المخصص": "Allocated", "السعة الكلية": "Total capacity", "لا ازدحام": "No congestion", "ازدحام": "Congestion", "الأمان وQoS": "Security & QoS", "فئة الحركة": "Traffic class", "صوت (أولوية عالية)": "Voice (high priority)", "فيديو": "Video", "بيانات": "Data", "المصدر": "Source", "الوجهة": "Destination", "قاعدة حظر ACL": "ACL deny rule", "جدار ناري": "Firewall", "هجوم ONT مارق": "Rogue ONT attack", "سيناريو تدريبي واختبار": "Training & exam", "بدء السيناريو": "Start scenario", "اختبار كامل (5 أعطال)": "Full exam (5 faults)", "شهادة PDF": "PDF certificate", "اسم المتدرب": "Trainee name", "قطع": "Cut", "تأكيد التشخيص": "Confirm diagnosis", "الوقت المتبقي": "Time left", "تذاكر الأعطال": "Fault tickets", "الطرفية": "Terminal", "سجل الأحداث": "Event log", "مسح": "Clear", "إعادة ضبط": "Reset", "الراوتر": "Router", "السويتش": "Switch", "حاسوب": "PC", "سبليتر": "Splitter", "مفتوح": "Open", "قيد المعالجة": "In progress", "مغلق": "Closed", "نجاح": "Success", "فشل": "Failed", "تحذير": "Warning", "الحزمة": "Packet", "وصلت عبر": "Delivered via", "لم تصل": "Not delivered", "انقطاع": "Outage", "عطل/تنبيه في الشبكة": "fault(s)/alert(s)", "الشبكة تعمل بشكل طبيعي": "Network operating normally", "ضمن الهدف": "Within target", "خارج الهدف": "Below target", "المسار": "Path", "الليف": "Fiber", "الطول الكلي": "Total length", "التوهين الكلي": "Total attenuation", "قدرة الاستقبال": "Rx power", "هامش القدرة": "Power margin", "حالة المسار": "Path status", "سليم": "OK", "هامش ضعيف": "Weak margin", "منقطع": "Down", "اختر جهازين مختلفين": "Select two different devices", "محظور بقاعدة ACL": "blocked by ACL rule", "حظر الجدار الناري بين الشبكات الافتراضية": "firewall blocks inter-VLAN traffic", "ONT مارق يشوّش الإرسال العكسي": "rogue ONT jams upstream", "ليف ضوئي": "Fiber", "نحاس Cat6 بنفس الأطوال": "Copper Cat6, same lengths", "غير عملي": "impractical", "تكاليف الإنشاء CAPEX": "CAPEX", "الإيراد الشهري": "Monthly revenue", "OPEX شهرياً": "Monthly OPEX", "الصافي الشهري": "Monthly net", "فترة الاسترداد (شهر)": "Payback (months)", "العائد السنوي ROI": "Annual ROI", "استخدام السبليتر": "Splitter utilization", "النظام جاهز": "System ready", "إعداد وتطوير": "Developed by", "علي كامل ياسين": "Ali Kamil Yassin", "فني ألياف ضوئية (FTTH) سابقاً": "former FTTH fiber technician", "بكالوريوس إدارة تقنيات المعلومات": "B.Sc. in IT Management", "أزرق": "Blue", "برتقالي": "Orange", "أخضر": "Green", "بني": "Brown", "رمادي": "Slate", "أبيض": "White", "أحمر": "Red", "أسود": "Black", "أصفر": "Yellow", "بنفسجي": "Violet", "وردي": "Rose", "تركوازي": "Aqua"};
-Object.assign(EN,{'التشخيص الميداني (قيم قياسية)':'Field diagnosis (standard values)','أحداث OTDR':'OTDR events','قيم مرجعية قياسية (ITU-T / TIA)':'Reference values (ITU-T / TIA)','نوع الحدث':'Event','الموقع':'Position','الفقد الزائد':'Excess loss','الفقد':'Loss','الانعكاس':'Reflectance','Rx المتوقع (سليم)':'Expected Rx (healthy)','Rx المقاس':'Measured Rx','نافذة Rx المسموحة':'Allowed Rx window','موصل البداية':'Start connector','موصل النهاية':'End connector','لحام':'Splice','تشبع المستقبل':'Receiver overload','المسار ضمن الحدود القياسية. لا إجراء مطلوب.':'Path within standard limits. No action required.','نظّف الطرف وافحصه بالمجهر ثم أعد القياس.':'Clean the end-face, inspect with a scope, then re-measure.'});const KEYS=Object.keys(EN).sort((a,b)=>b.length-a.length),TT=s=>KEYS.reduce((x,k)=>x.split(k).join(EN[k]),s);
+const DARK=[0,3,6,7,9],{EN,TT}=I18N;
 let lang='ar';const X=s=>lang==='en'?TT(s):s;
 COL.forEach((c,i)=>$('col').add(new Option(`${i+1} · ${c[0]}`,i+1)));
 const colOf=k=>S.L[k].col||Object.keys(S.L).filter(x=>S.L[x].t==='fo').indexOf(k)%12+1;
@@ -309,21 +315,44 @@ function biz(){
   return{capex,rev,opex,net,pay:net>0?capex/net:Infinity,roi:capex?net*12/capex*100:0,util:subs/S.cfg.ratio*100};
 }
 
+/* ===== undo/redo, tour, scenarios ===== */
+const H={u:[],r:[],cur:null},topo=()=>JSON.stringify({N:S.N,L:S.L,on:S.on,v:S.v,acl:S.acl,fw:S.fw,atk:S.atk,bw:S.bw,dba:S.dba,biz:S.biz,cfg:S.cfg,T:S.T});
+function hist(){const j=topo();if(H.cur===null)H.cur=j;else if(j!==H.cur){H.u.push(H.cur);if(H.u.length>50)H.u.shift();H.r=[];H.cur=j}}
+function undo(red){
+  const a=red?H.r:H.u,b=red?H.u:H.r;if(!a.length)return;b.push(H.cur);H.cur=a.pop();Object.assign(S,JSON.parse(H.cur));S.tr=null;
+  if(!S.L[selL])selL=Object.keys(S.L)[0];if(!S.N[selN])selN='router';build();update();
+}
+$('un').onclick=()=>undo(0);$('re').onclick=()=>undo(1);
+addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&!$('tour').hidden)return tour(99);
+  if((e.ctrlKey||e.metaKey)&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){if(e.key==='z'){e.preventDefault();undo(0)}else if(e.key==='y'){e.preventDefault();undo(1)}}
+});
+addEventListener('error',e=>log('خطأ غير متوقع',e.message,false));
+$('hc').onclick=()=>{document.documentElement.toggleAttribute('data-contrast');update()};
+const TOUR=[['مرحباً بك','هذا محاكي تعليمي لشبكة FTTH. اسحب الأجهزة وانقر على الوصلات لتحديدها.'],['اختبر الشبكة','اختر مرسلاً ومستقبلاً ثم اضغط «إرسال الحزم». راقب ميزانية القدرة والتشخيص.'],['أضف عطلاً','غيّر حالة الوصلة (قطع، موصل متسخ، انحناء) ثم استخدم OTDR وقياس القدرة لتحديد السبب.'],['تدرّب','ابدأ سيناريو ميدانياً أو اختباراً كاملاً. يمكنك التراجع بـ Ctrl+Z وحفظ عملك أو تصديره.']];
+let ts=0;
+function tour(i){ts=i;if(i>=TOUR.length){$('tour').hidden=true;try{localStorage.setItem('netsim-tour','1')}catch{}return}
+  $('tour').hidden=false;$('tt').textContent=TOUR[i][0];$('tp').textContent=`(${i+1}/${TOUR.length}) `+TOUR[i][1];$('tn').textContent=i===TOUR.length-1?'ابدأ':'التالي';$('tn').focus()}
+$('tn').onclick=()=>tour(ts+1);$('tx').onclick=()=>tour(99);$('hl').onclick=()=>tour(0);
+const FS=[{k:'switch-spl',f:'cut',c:'شكوى: انقطاع الإنترنت عن جميع المشتركين بعد أعمال حفر قرب الشارع.'},
+  {k:'spl-pc2',f:'dirty',pre:l=>{l.odf=1},c:'شكوى: بطء وانقطاع متكرر عند مشترك واحد بعد تبديل توصيلة في صندوق التوزيع.'},
+  {k:'spl-pc3',f:'bend',pre:l=>{l.len=2.5;l.sp=2},c:'شكوى: إشارة ضعيفة عند مشترك بعيد بعد تركيب كابل جديد داخل المنزل.'}];
+$('fsb').onclick=()=>{
+  const sc=FS[+$('fs').value];S=base();selN='pc1';selL='router-switch';build();
+  if(sc.pre)sc.pre(S.L[sc.k]);setFault(sc.k,sc.f,1);S.tr={k:sc.k,f:sc.f,t:Date.now(),w:0};
+  log('بلاغ جديد',sc.c,false,1);log('المطلوب','حدّد الوصلة ونوع العطل، ثم اضغط «تأكيد التشخيص» في قسم السيناريو التدريبي.',true);update();
+};
+['tx','sens','ovl'].forEach(k=>{$('c_'+k).onchange=e=>{const v=parseFloat(e.target.value),c=S.cfg;
+  if(!isFinite(v)||v<-60||v>20)return log('المعدات','قيمة غير صالحة.',false);
+  const n={...c,[k]:v};if(n.sens>=n.ovl)return log('المعدات','الحساسية يجب أن تكون أقل من نقطة التشبع.',false);S.cfg=n;update()}});
 /* ===== real-value field diagnosis (ITU-T G.652/G.984, TIA-568 typical values) ===== */
+const DX={los:['LOS: لا يصل ضوء (Rx < −40 dBm). حدّد موقع القطع بـ OTDR، ثم تأكد من تشغيل الأجهزة.','fail'],copper:['مسار نحاسي: افحص الكبل والمنفذ (Cat6 ≤ 100 م).','ok'],far:['المسافة تتجاوز 20 km (حد GPON).','fail'],dirty:['موصل متسخ أو تالف: فقد زائد ≈ 3 dB وانعكاس ≈ −35 dB. نظّف الطرف وافحصه بالمجهر ثم أعد القياس.','warnc'],bend:['انحناء حاد (Macro-bend) ≈ 1.5 dB. افرد الليف (نصف قطر ≥ 30 مم) وأعد القياس.','warnc'],ov:['تشبع المستقبل (Rx > −8 dBm). ركّب مخفّضاً (Attenuator) أو غيّر نسبة السبليتر.','warnc'],weak:['هامش ضعيف (Rx < −24 dBm). افحص الموصلات واللحامات والطول.','warnc'],ok:['المسار ضمن الحدود القياسية. لا إجراء مطلوب.','ok']};
 function diag(){
   const a=$('source').value,b=$('target').value;
   if(a===b){$('dg2').innerHTML='';$('dgm').textContent='اختر جهازين مختلفين';return}
-  const p=route(a,b),m=ev(p),x=ev(p,1),ex=m.loss-x.loss,far=p.some(n=>S.v[n]&&dist(n)>20);let v,c='warnc';
-  if(m.s==='down'){v='LOS: لا يصل ضوء (Rx < −40 dBm). حدّد موقع القطع بـ OTDR، ثم تأكد من تشغيل الأجهزة.';c='fail'}
-  else if(!m.fo){v='مسار نحاسي: افحص الكبل والمنفذ (Cat6 ≤ 100 م).';c='ok'}
-  else if(far){v='المسافة تتجاوز 20 km (حد GPON).';c='fail'}
-  else if(ex>=2.5)v='موصل متسخ أو تالف: فقد زائد ≈ 3 dB وانعكاس ≈ −35 dB. نظّف الطرف وافحصه بالمجهر ثم أعد القياس.';
-  else if(ex>=1)v='انحناء حاد (Macro-bend) ≈ 1.5 dB. افرد الليف (نصف قطر ≥ 30 مم) وأعد القياس.';
-  else if(m.ov)v='تشبع المستقبل (Rx > −8 dBm). ركّب مخفّضاً (Attenuator) أو غيّر نسبة السبليتر.';
-  else if(m.m<3)v='هامش ضعيف (Rx < −24 dBm). افحص الموصلات واللحامات والطول.';
-  else{v='المسار ضمن الحدود القياسية. لا إجراء مطلوب.';c='ok'}
+  const p=route(a,b),m=ev(p),x=ev(p,1),ex=m.loss-x.loss,far=p.some(n=>S.v[n]&&dist(n)>20);const[v,c]=DX[Engine.diagnose({down:m.s==='down',fo:m.fo,far,ex,ov:m.ov,m:m.m})];
   const f=(n,u)=>m.fo?n.toFixed(2)+u:'—';
-  $('dg2').innerHTML=`<tr><td>Tx (GPON B+: ‎+1.5…+5)</td><td>+3.00 dBm</td></tr><tr><td>Rx المتوقع (سليم)</td><td>${f(x.rx,' dBm')}</td></tr><tr><td>Rx المقاس</td><td>${m.s==='down'?'LOS':f(m.rx,' dBm')}</td></tr><tr><td>الفقد الزائد</td><td>${m.s==='down'?'—':f(ex,' dB')}</td></tr><tr><td>نافذة Rx المسموحة</td><td>−27 … −8 dBm</td></tr>`;
+  $('dg2').innerHTML=`<tr><td>Tx (GPON B+: ‎+1.5…+5)</td><td>${S.cfg.tx.toFixed(2)} dBm</td></tr><tr><td>Rx المتوقع (سليم)</td><td>${f(x.rx,' dBm')}</td></tr><tr><td>Rx المقاس</td><td>${m.s==='down'?'LOS':f(m.rx,' dBm')}</td></tr><tr><td>الفقد الزائد</td><td>${m.s==='down'?'—':f(ex,' dB')}</td></tr><tr><td>نافذة Rx المسموحة</td><td>${S.cfg.sens} … ${S.cfg.ovl} dBm</td></tr>`;
   $('dgm').className='li '+c;$('dgm').textContent=v;
 }
 function oev(){
@@ -340,7 +369,7 @@ function oev(){
 function ext(){
   diag();oev();const l=S.L[selL],A=alloc(),B=biz();
   $('col').value=colOf(selL);$('odfs').value=l.odf?1:0;$('col').disabled=$('odfs').disabled=l.t==='cu';
-  $('bw').value=S.bw[selN]||100;$('bw').disabled=!S.v[selN];$('dba').value=S.dba;$('fee').value=S.biz.fee;$('opx').value=S.biz.opex;
+  $('bw').value=S.bw[selN]||100;$('bw').disabled=!S.v[selN];$('dba').value=S.dba;['tx','sens','ovl'].forEach(k=>$('c_'+k).value=S.cfg[k]);$('fee').value=S.biz.fee;$('opx').value=S.biz.opex;
   $('fw').textContent='جدار ناري: '+(S.fw?'مفعّل':'معطّل');
   $('gp').innerHTML='<tr><td>ONT</td><td>المسافة</td><td>المتعاقد</td><td>المخصص</td></tr>'+Object.keys(S.v).map(k=>{const d=dist(k);
     return `<tr><td>${esc(S.N[k].e)}</td><td>${d.toFixed(2)} km ${d>20?'✘':'✔'}</td><td>${S.bw[k]||100} Mbps</td><td>${A.r[k]?A.r[k].toFixed(0)+' Mbps':'—'}</td></tr>`}).join('')
@@ -399,17 +428,7 @@ function cert(){
     L(`المعدل: ${a}/100 · ${a>=60?'ناجح':'غير ناجح'}`,580,28,a>=60?'#0f9d5a':'#d6314a');L('درجات الأعطال: '+S.ex.s.join(' · '),640,18);
     L(new Date().toLocaleDateString('en-GB'),760,18);L('محاكي الشبكات والألياف الضوئية (FTTH) · محاكاة تعليمية',1040,14,'#52647f')});
 }
-function pdf(cs){
-  const enc=new TextEncoder(),parts=[],off=[],n=cs.length;let len=0;
-  const put=x=>{const b=typeof x==='string'?enc.encode(x):x;parts.push(b);len+=b.length},obj=(i,x)=>{off[i]=len;put(`${i} 0 obj\n${x}\nendobj\n`)};
-  put('%PDF-1.4\n');obj(1,'<</Type/Catalog/Pages 2 0 R>>');obj(2,`<</Type/Pages/Count ${n}/Kids[${cs.map((_,i)=>`${3+i*3} 0 R`).join(' ')}]>>`);
-  cs.forEach((c,i)=>{const p=3+i*3,jpg=Uint8Array.from(atob(c.toDataURL('image/jpeg',.92).split(',')[1]),ch=>ch.charCodeAt(0)),cn='q 595 0 0 842 0 0 cm /Im Do Q';
-    obj(p,`<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</XObject<</Im ${p+2} 0 R>>>>/Contents ${p+1} 0 R>>`);
-    obj(p+1,`<</Length ${cn.length}>>\nstream\n${cn}\nendstream`);
-    off[p+2]=len;put(`${p+2} 0 obj\n<</Type/XObject/Subtype/Image/Width ${c.width}/Height ${c.height}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${jpg.length}>>\nstream\n`);put(jpg);put('\nendstream\nendobj\n')});
-  const tot=3+n*3,xr=len;put(`xref\n0 ${tot}\n0000000000 65535 f \n`);for(let i=1;i<tot;i++)put(String(off[i]).padStart(10,'0')+' 00000 n \n');
-  put(`trailer\n<</Size ${tot}/Root 1 0 R>>\nstartxref\n${xr}\n%%EOF`);return new Blob(parts,{type:'application/pdf'});
-}
+const pdf=cs=>PDFLib.build(cs.map(c=>({w:c.width,h:c.height,bytes:Uint8Array.from(atob(c.toDataURL('image/jpeg',.92).split(',')[1]),ch=>ch.charCodeAt(0))})));
 function dl(b,name){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 /* i18n */
 function tr(){
@@ -417,6 +436,7 @@ function tr(){
   while(n=w.nextNode()){if(n.parentNode.closest('script,#tout'))continue;if(n.__a===undefined||n.data!==n.__e)n.__a=n.data;const v=lang==='en'?TT(n.__a):n.__a;if(n.data!==v)n.data=v;n.__e=v}
 }
 new MutationObserver(tr).observe(document.body,{subtree:true,childList:true,characterData:true});
-$('lg').onclick=()=>{lang=lang==='ar'?'en':'ar';document.documentElement.lang=lang;document.documentElement.dir=lang==='en'?'ltr':'rtl';$('lg').textContent=lang==='en'?'🌐 AR':'🌐 EN';tr()};
+$('lg').onclick=()=>{lang=lang==='ar'?'en':'ar';document.documentElement.lang=lang;document.documentElement.dir=lang==='en'?'ltr':'rtl';$('lg').textContent=lang==='en'?'🌐 AR':'🌐 EN';tr();update()};
+try{if(!localStorage.getItem('netsim-tour'))tour(0)}catch{}
 build();log('النظام جاهز','أرسل حزماً، أضف عطلاً، جرّب OTDR، أو ابدأ سيناريو تدريبياً.',true);update();
 })();
