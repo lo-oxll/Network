@@ -41,7 +41,7 @@
     <div class="row"><div><label for="svc">الخدمة</label><select id="svc"><option value="web">ويب (HTTP/S)</option><option value="dns">DNS</option><option value="dhcp">DHCP</option><option value="mail">بريد (SMTP)</option><option value="icmp">ping (ICMP)</option></select></div><p class="help">المصدر: «المُرسل» في لوحة التحكم. لـ ping يُستخدم «المستقبِل».</p></div>
     <table id="osi"></table><div id="osis" class="li"></div>
     <hr><strong>مهمات الجهاز / الخادم المحدد</strong><div id="srv" class="li"></div>
-    </div><div data-t="net"><p class="help">اسحب الأجهزة لتغيير أماكنها. انقر على جهاز أو خط لتحديده.</p></div>
+    </div><div data-t="net"><strong>الهيكل: الفاتة ← السبلتر ← ONU ← الراوتر المنزلي ← الحاسوب</strong><div id="hier" class="li tree"></div><p class="help">اسحب الأجهزة لتغيير أماكنها. انقر على جهاز أو خط لتحديده.</p></div>
   </div>
 </section>
 <aside class="panel noprint">
@@ -59,7 +59,8 @@
       <div class="field"><label for="fault">حالة الوصلة</label><select id="fault"><option value="ok">سليمة</option><option value="dirty">موصل متسخ (+3 dB)</option><option value="bend">انحناء (+1.5 dB)</option><option value="cut">مقطوعة</option></select></div>
       <div class="row"><button class="red" id="cut">قطع الوصلة</button><button class="green" id="fix">إعادة الاتصال</button></div>
       <div class="row"><button id="otdr">🔦 فحص OTDR</button><button id="pm">📶 قياس القدرة</button></div>
-      <div class="row"><button id="tog">تعطيل الجهاز</button><button id="add">➕ إضافة ONT</button></div></details>
+      <div class="row"><button id="tog">تعطيل الجهاز</button><button id="lay">⇅ ترتيب تلقائي</button></div>
+      <div class="row"><div><label for="ak">إضافة تحت الجهاز المحدد</label><select id="ak"><option value="pc">حاسوب (تحت راوتر)</option><option value="hr">راوتر منزلي (تحت ONU)</option><option value="onu">ONU (تحت سبلتر)</option><option value="spl">سبلتر (تحت فاتة)</option><option value="fat">الفاتة (FAT)</option></select></div><div><label>&nbsp;</label><button id="add">➕ إضافة</button></div></div><button id="del" class="red" style="margin-bottom:10px">🗑 حذف الجهاز المحدد وما تحته</button></details>
     <details data-t="fiber"><summary>معايير الليف والسبليتر</summary>
       <div class="row"><div><label for="fib">نوع الليف / الطول الموجي</label><select id="fib"></select></div><div><label for="rat">نسبة السبليتر</label><select id="rat"><option value="2">1:2</option><option value="4">1:4</option><option value="8">1:8</option><option value="16">1:16</option></select></div></div><div class="row"><div><label for="c_tx">Tx للـ OLT (dBm)</label><input id="c_tx" type="number" step="0.1"></div><div><label for="c_sens">حساسية ONT (dBm)</label><input id="c_sens" type="number" step="0.1"></div></div><div class="row"><div><label for="c_ovl">نقطة التشبع (dBm)</label><input id="c_ovl" type="number" step="0.1"></div><p class="help">أدخل قيم ورقة مواصفات معداتك.</p></div><div class="row"><div><label for="wdm">التعايش WDM</label><select id="wdm"><option value="0">بدون</option><option value="1">GPON+XGS (‎+1.5 dB)</option></select></div><div></div></div></details>
     <details data-t="mgmt"><summary>🎯 سيناريو تدريبي واختبار</summary>

@@ -68,3 +68,8 @@ ul.help{padding-inline-start:18px;margin:6px 0}
 [hidden]{display:none!important}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tabs button{width:auto;padding:7px 12px;font-size:13px}
 .link.blk{stroke:var(--muted);stroke-dasharray:3 6}
+
+.canvas{height:560px}.node{width:84px;min-height:54px;padding:4px}.node .i{font-size:18px;line-height:1.2}.node strong{font-size:11px}.node small{font-size:9px}
+.tree ul{margin:2px 0;padding-inline-start:16px;list-style:'▸ '}.tree>ul{padding-inline-start:4px}
+@media(max-width:880px){.canvas{height:520px}}
+@media(max-width:450px){.canvas{height:480px}.node{width:66px;min-height:48px}.node strong{font-size:9.5px}.node .i{font-size:15px}}

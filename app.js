@@ -5,15 +5,39 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
 const{FIB,SPL}=Engine;
 const FT={cut:'قطع',dirty:'موصل متسخ',bend:'انحناء'},ST={open:'مفتوح',work:'قيد المعالجة',closed:'مغلق'};
 const base=()=>{
-  const N={router:{n:'الراوتر',e:'Router',i:'📡',x:28,y:12},sw2:{n:'سويتش 2 (احتياطي)',e:'Switch-2 · STP',i:'🔁',x:72,y:12,ip:'192.168.1.3'},switch:{n:'السويتش / OLT',e:'Switch · OLT',i:'🔀',x:50,y:38},spl:{n:'سبليتر',e:'Splitter',i:'🔱',x:50,y:63},
-    pc1:{n:'حاسوب 1',e:'ONT-01',i:'💻',x:18,y:88},pc2:{n:'حاسوب 2',e:'ONT-02',i:'🖥️',x:50,y:88},pc3:{n:'حاسوب 3',e:'ONT-03',i:'🖥️',x:82,y:88},
-    dhcp:{n:'خادم DHCP',e:'DHCP Server',i:'📋',x:13,y:30,ip:'192.168.1.10'},dns:{n:'خادم DNS',e:'DNS Server',i:'📖',x:13,y:56,ip:'192.168.1.11'},web:{n:'خادم الويب',e:'Web Server',i:'🌐',x:87,y:30,ip:'192.168.1.12'},mail:{n:'خادم البريد',e:'Mail Server',i:'✉️',x:87,y:56,ip:'192.168.1.13'}};
+  const m=(n,e,i,k,x,y,ip)=>({n,e,i,k,x,y,...(ip?{ip}:{})});
+  const N={router:m('الراوتر','Router','📡','router',30,7),sw2:m('سويتش 2 (احتياطي)','Switch-2 · STP','🔁','sw2',70,7,'192.168.1.3'),
+    switch:m('السويتش / OLT','Switch · OLT','🔀','olt',50,24),
+    fat1:m('الفاتة 1','FAT-1','📦','fat',50,40),spl1:m('سبلتر 1','Splitter 1:4','🔱','spl',30,54),spl2:m('سبلتر 2','Splitter 1:4','🔱','spl',70,54),
+    onu1:m('ONU 1','ONU-01','📟','onu',20,68,'10.20.0.1'),onu2:m('ONU 2','ONU-02','📟','onu',40,68,'10.20.0.2'),onu3:m('ONU 3','ONU-03','📟','onu',70,68,'10.20.0.3'),
+    hr1:m('راوتر منزلي 1','Home router 1','📶','hr',20,81,'192.168.100.1'),hr2:m('راوتر منزلي 2','Home router 2','📶','hr',40,81,'192.168.100.2'),hr3:m('راوتر منزلي 3','Home router 3','📶','hr',70,81,'192.168.100.3'),
+    pc1:m('حاسوب 1','PC-01','💻','pc',12,93),pc2:m('حاسوب 2','PC-02','💻','pc',28,93),pc3:m('حاسوب 3','PC-03','💻','pc',40,93),pc4:m('حاسوب 4','PC-04','💻','pc',70,93),
+    dhcp:m('خادم DHCP','DHCP Server','📋','srv',9,22,'192.168.1.10'),dns:m('خادم DNS','DNS Server','📖','srv',9,38,'192.168.1.11'),web:m('خادم الويب','Web Server','🌐','srv',91,22,'192.168.1.12'),mail:m('خادم البريد','Mail Server','✉️','srv',91,38,'192.168.1.13')};
   const on={};Object.keys(N).forEach(k=>on[k]=true);
-  const lk=(a,b,t,len,sp)=>({a,b,t,len,sp,f:'ok',fp:.5,tc:+((Math.random()-.5)*.2).toFixed(3),ts:+((Math.random()-.5)*.06).toFixed(3)});
-  return{N,on,L:{'router-switch':lk('router','switch','cu',.01,0),'switch-spl':Object.assign(lk('switch','spl','fo',16,6),{odf:1}),'spl-pc1':lk('spl','pc1','fo',.3,0),'spl-pc2':lk('spl','pc2','fo',.3,0),'spl-pc3':lk('spl','pc3','fo',.3,0),'switch-dhcp':lk('switch','dhcp','cu',.01,0),'switch-dns':lk('switch','dns','cu',.01,0),'switch-web':lk('switch','web','cu',.01,0),'switch-mail':lk('switch','mail','cu',.01,0),'router-sw2':lk('router','sw2','cu',.01,0),'switch-sw2':lk('switch','sw2','cu',.01,0)},
-    v:{pc1:10,pc2:10,pc3:20},T:[],st:{sent:0,succ:0,latS:0,latN:0},h:[],acl:[],nat:1,fw:0,atk:null,ex:null,dba:1,bw:{pc1:100,pc2:100,pc3:100},biz:{fee:25,opex:40},cfg:{fib:'GPON',ratio:4,tx:1.5,sens:-27,ovl:-8,wdm:0},t0:Date.now(),tr:null};
+  const lk=(a,b,t,len,sp,odf)=>({a,b,t,len,sp,f:'ok',fp:.5,...(odf?{odf:1}:{}),tc:+((Math.random()-.5)*.2).toFixed(3),ts:+((Math.random()-.5)*.06).toFixed(3)});
+  const L={};
+  [['router','switch','cu',.01,0],['router','sw2','cu',.01,0],['switch','sw2','cu',.01,0],['switch','fat1','fo',16,6,1],['fat1','spl1','fo',.005,0],['fat1','spl2','fo',.005,0],
+   ['spl1','onu1','fo',.3,0],['spl1','onu2','fo',.3,0],['spl2','onu3','fo',.3,0],['onu1','hr1','cu',.01,0],['onu2','hr2','cu',.01,0],['onu3','hr3','cu',.01,0],
+   ['hr1','pc1','cu',.01,0],['hr1','pc2','cu',.01,0],['hr2','pc3','cu',.01,0],['hr3','pc4','cu',.01,0],
+   ['switch','dhcp','cu',.01,0],['switch','dns','cu',.01,0],['switch','web','cu',.01,0],['switch','mail','cu',.01,0]].forEach(x=>{L[x[0]+'-'+x[1]]=lk(...x)});
+  autoLayout({N,L});
+  return{N,on,L,v:{pc1:10,pc2:10,pc3:10,pc4:20},T:[],st:{sent:0,succ:0,latS:0,latN:0},h:[],acl:[],nat:1,fw:0,atk:null,ex:null,dba:1,bw:{onu1:100,onu2:100,onu3:100},biz:{fee:25,opex:40},cfg:{fib:'GPON',ratio:4,tx:1.5,sens:-27,ovl:-8,wdm:0},t0:Date.now(),tr:null};
 };
-let S=base(),selN='pc1',selL='switch-spl',busy=false;
+/* ===== hierarchy: OLT -> FAT -> splitter -> ONU -> home router -> PC ===== */
+const PLV={olt:2,fat:3,spl:4,onu:5,hr:6,pc:7};
+function kd(id,N){N=N||S.N;const n=N[id];if(n&&n.k)return n.k;return/^spl/.test(id)?'spl':/^fat/.test(id)?'fat':/^onu/.test(id)?'onu':/^hr/.test(id)?'hr':/^pc/.test(id)?'pc':id}
+function autoLayout(o){
+  const N=o.N,K=id=>kd(id,N),Y={fat:40,spl:54,onu:68,hr:81,pc:93},ch={},pos={};let nx=0;
+  Object.values(o.L).forEach(l=>{const a=PLV[K(l.a)],b=PLV[K(l.b)];if(a&&b&&a!==b){const[p,c]=a<b?[l.a,l.b]:[l.b,l.a];(ch[p]=ch[p]||[]).push(c)}});
+  const dfs=id=>{const c=ch[id]||[];if(!c.length)return pos[id]=nx++;const xs=c.map(dfs);return pos[id]=(Math.min(...xs)+Math.max(...xs))/2};
+  (ch.switch||[]).forEach(dfs);const T=Math.max(1,nx-1);
+  Object.keys(pos).forEach(id=>{N[id].x=nx<2?50:+(12+pos[id]/T*76).toFixed(1);N[id].y=Y[K(id)]});
+}
+let S=base(),selN='pc1',selL='switch-fat1',busy=false;
+const isSpl=id=>kd(id)==='spl',pas=id=>{const k=kd(id);return k==='spl'||k==='fat'},onus=()=>Object.keys(S.N).filter(k=>kd(k)==='onu');
+const kids=id=>Object.values(S.L).map(l=>l.a===id?l.b:l.b===id?l.a:null).filter(x=>x&&PLV[kd(x)]>PLV[kd(id)]);
+const onuOf=id=>path('switch',id).find(n=>kd(n)==='onu')||onus()[0],splOf=ont=>path('switch',ont).find(isSpl)||'switch';
+const maxOnus=()=>Math.max(0,...Object.keys(S.N).filter(isSpl).map(sp=>kids(sp).filter(x=>kd(x)==='onu').length));
 const canvas=$('canvas'),svg=$('links'),el={};
 const att=()=>FIB[S.cfg.fib][1],lname=k=>S.N[S.L[k].a].n+' ↔ '+S.N[S.L[k].b].n;
 const vis=k=>S.tr&&S.tr.k===k?'ok':S.L[k].f;
@@ -38,7 +62,10 @@ function path(a,b){
   return[a,b];
 }
 const hub=(a,b,h)=>[...path(a,h),...path(h,b).slice(1)];
-const route=(a,b)=>S.v[a]&&S.v[b]?hub(a,b,S.v[a]===S.v[b]?'switch':'router'):path(a,b);
+function route(a,b){
+  if(S.v[a]&&S.v[b]){if(S.v[a]!==S.v[b])return hub(a,b,'router');return onuOf(a)===onuOf(b)?path(a,b):hub(a,b,'switch')}
+  return path(a,b);
+}
 function ev1(p,nf,fk){
   const{tx,sens,ovl}=S.cfg;let loss=0,seg=0,sf=0,len=0,fo=0,down=p.some(n=>!S.on[n]);
   /* optical segments end at active devices (OLT/ONT/switch): power is regenerated there, so the worst segment decides */
@@ -47,10 +74,10 @@ function ev1(p,nf,fk){
     if(l.f==='cut'&&!nf)down=1;len+=l.len;
     if(l.t==='fo'){fo=1;sf=1;seg+=Engine.linkLoss(l,FIB[fk][1],nf)}
     const nx=p[i+1],end=i+1===p.length-1;
-    if(nx==='spl'&&!end)seg+=SPL[S.cfg.ratio];
-    if(nx!=='spl'||end){if(sf)loss=Math.max(loss,seg+(S.cfg.wdm?1.5:0));seg=0;sf=0}
+    if(isSpl(nx)&&!end)seg+=SPL[S.cfg.ratio];
+    if(!pas(nx)||end){if(sf)loss=Math.max(loss,seg+(S.cfg.wdm?1.5:0));seg=0;sf=0}
   }
-  const rx=tx-loss,m=fo?rx-sens:null,ov=!!(fo&&rx>ovl),far=p.some(n=>S.v[n]&&dist(n)>20);
+  const rx=tx-loss,m=fo?rx-sens:null,ov=!!(fo&&rx>ovl),far=p.some(n=>kd(n)==='onu'&&dist(n)>20);
   return{s:Engine.state({down,fo,far,m,ov}),loss,len,fo,rx,ov,m,base:(p.length-1)*.4+len*.02};
 }
 function ev(p,nf){
@@ -70,10 +97,10 @@ function build(){
 }
 function fill(){
   const sv=[$('source').value,$('target').value];
-  ['source','target'].forEach((s,j)=>{$(s).replaceChildren();Object.keys(S.N).filter(k=>k!=='spl').forEach(k=>$(s).add(new Option(S.N[k].n,k)));
-    $(s).value=S.N[sv[j]]&&sv[j]!=='spl'?sv[j]:(j?'router':'pc1')});
+  ['source','target'].forEach((s,j)=>{$(s).replaceChildren();Object.keys(S.N).filter(k=>!pas(k)).forEach(k=>$(s).add(new Option(S.N[k].n,k)));
+    $(s).value=S.N[sv[j]]&&!pas(sv[j])?sv[j]:(j?'router':'pc1')});
   $('linkSel').replaceChildren();Object.keys(S.L).forEach(k=>$('linkSel').add(new Option(lname(k),k)));
-  $('fib').value=S.cfg.fib;$('rat').value=S.cfg.ratio;['as','ad'].forEach(s=>{$(s).replaceChildren();Object.keys(S.N).filter(k=>k!=='spl').forEach(k=>$(s).add(new Option(S.N[k].n,k)))});
+  $('fib').value=S.cfg.fib;$('rat').value=S.cfg.ratio;['as','ad'].forEach(s=>{$(s).replaceChildren();Object.keys(S.N).filter(k=>!pas(k)).forEach(k=>$(s).add(new Option(S.N[k].n,k)))});
 }
 function draw(){
   svg.setAttribute('viewBox',`0 0 ${canvas.clientWidth} ${canvas.clientHeight}`);svg.replaceChildren();const BL=stp();
@@ -91,7 +118,7 @@ function budget(){
   const a=$('source').value,b=$('target').value;
   if(a===b){$('bud').innerHTML='<tr><td>اختر جهازين مختلفين</td><td>—</td></tr>';return}
   const p=route(a,b),e=ev(p),f=v=>e.fo?v:'—';
-  $('bud').innerHTML=`<tr><td>المسار</td><td style="direction:rtl">${esc(p.map(n=>S.N[n].n).join(' ← '))}</td></tr>
+  $('bud').innerHTML=`<tr><td>المسار</td><td style="direction:rtl">${esc(p.map(n=>(S.N[n]||{n}).n).join(' ← '))}</td></tr>
   <tr><td>الليف</td><td>${FIB[S.cfg.fib][0]}</td></tr><tr><td>الطول الكلي</td><td>${e.len.toFixed(2)} km</td></tr>
   <tr><td>التوهين الكلي</td><td>${f(e.loss.toFixed(2)+' dB')}</td></tr><tr><td>قدرة الاستقبال Rx</td><td>${f(e.rx.toFixed(2)+' dBm')}</td></tr>
   ${e.up?`<tr><td>Rx هابط (${FIB[Engine.DIR[S.cfg.fib].d][0]})</td><td>${e.dn.rx.toFixed(2)} dBm</td></tr><tr><td>Rx صاعد (${FIB[Engine.DIR[S.cfg.fib].u][0]})</td><td>${e.up.rx.toFixed(2)} dBm</td></tr>`:''}<tr><td>هامش القدرة</td><td>${f(e.fo&&e.m.toFixed(2)+' dB')}</td></tr>
@@ -137,7 +164,7 @@ function tickets(){
 function tkOpen(k,d){if(!S.T.some(t=>t.k===k&&t.s!=='closed'))S.T.push({id:S.T.length+1,k,d,s:'open',o:Date.now()})}
 function tkClose(k){S.T.filter(t=>t.k===k&&t.s!=='closed').forEach(t=>{t.s='closed';t.c=Date.now()})}
 function update(){hist();
-  S.N.spl.n='سبليتر 1:'+S.cfg.ratio;
+  Object.keys(S.N).forEach(k=>{if(isSpl(k))S.N[k].e='Splitter 1:'+S.cfg.ratio});
   Object.keys(el).forEach(id=>{
     el[id].classList.toggle('off',!S.on[id]);el[id].classList.toggle('sel',id===selN);
     el[id].querySelector('strong').textContent=S.N[id].n;el[id].querySelector('small').textContent=S.on[id]?S.N[id].e:'معطّل';
@@ -195,7 +222,7 @@ function trTick(){
   if(r<=0){const k=S.tr.k,f=S.tr.f;addScore(S.tr.n||'—',0,120);S.tr=null;log('انتهى الوقت',`الدرجة 0/100. العطل كان: ${lname(k)} (${FT[f]}).`,false);setFault(k,'ok');update();trEnd(0)}
 }
 const trs=()=>{
-  const ks=Object.keys(S.L).filter(k=>S.L[k].t==='fo'&&S.L[k].f==='ok');
+  const ks=Object.keys(S.L).filter(k=>S.L[k].t==='fo'&&S.L[k].f==='ok'&&S.L[k].len>=.05);
   if(S.tr||!ks.length){log('سيناريو تدريبي','أصلح الأعطال الحالية أولاً أو أنهِ السيناريو الجاري.',false);return}
   const k=ks[Math.floor(Math.random()*ks.length)],f=['cut','dirty','bend'][Math.floor(Math.random()*3)];
   setFault(k,f,1);S.tr={k,f,t:Date.now(),w:0,n:'سيناريو عشوائي'};log('سيناريو تدريبي','ظهر عطل مجهول. استخدم الإرسال وقياس القدرة وOTDR ثم شخّصه.',true,1);update();
@@ -213,12 +240,12 @@ $('trd').onclick=()=>{
 setInterval(trTick,1000);
 /* terminal */
 const tout=$('tout'),tp=s=>{const d=document.createElement('div');d.textContent=s;tout.append(d);tout.scrollTop=tout.scrollHeight};
-const who=s=>{s=(s||'').toLowerCase();return S.N[s]&&s!=='spl'?s:Object.keys(S.N).find(k=>ip(k)===s)};
+const who=s=>{s=(s||'').toLowerCase();return S.N[s]&&!pas(s)?s:Object.keys(S.N).find(k=>ip(k)===s)};
 function cmd(line){
   const[c,a,b]=line.trim().split(/\s+/),src=$('source').value;tp(`${src}> ${line}`);
   if(c==='help')tp('ping <host> | trace <host> | ip | vlan <pcN> <id> | nslookup <name> | dhcp | curl <host> | clear');
   else if(c==='clear')tout.replaceChildren();
-  else if(c==='ip')Object.keys(S.N).filter(k=>k!=='spl').forEach(k=>tp(`${S.N[k].e.padEnd(14)} ${ip(k)}${S.v[k]?'  VLAN '+S.v[k]:''}`));
+  else if(c==='ip')Object.keys(S.N).filter(k=>!pas(k)).forEach(k=>tp(`${S.N[k].e.padEnd(14)} ${ip(k)}${S.v[k]?'  VLAN '+S.v[k]:''}`));
   else if(c==='vlan'){const k=who(a),id=+b;if(!S.v[k]||!(id>0&&id<4095))tp('usage: vlan <pcN> <1-4094>');else{S.v[k]=id;tp(`${k} -> VLAN ${id} (${ip(k)})`);update()}}
   else if(c==='nslookup'){
     const H={'web.local':'web','dns.local':'dns','dhcp.local':'dhcp','mail.local':'mail'};if(!a)return tp('usage: nslookup <name>');
@@ -262,9 +289,9 @@ $('otdr').onclick=()=>{
   else log(h,`لا أحداث شاذة. توهين الألياف ${(l.len*att()).toFixed(2)} dB.`,true);
 };
 $('pm').onclick=()=>{
-  if(!S.v[selN]){log('قياس القدرة','حدّد ONT (حاسوب) أولاً.',false);return}
-  const r=pmRead(selN),j=()=>(Math.random()-.5)*.2,fx=r.f.s==='down'?'LOS':(r.f.rx+j()).toFixed(1),ox=r.o.s==='down'?'LOS':(r.o.rx+j()).toFixed(1);
-  log('Power Meter',`${bi('مدخل السبليتر','Splitter input')}: ${fx} dBm (${bi('طبيعي','normal')} −11…−4) · ONT ${S.N[selN].e}: ${ox} dBm (${bi('طبيعي','normal')} −24…−12)`,r.code==='ok',r.code!=='ok'&&!r.code.startsWith('los'));
+  const ou=onuOf(selN);if(!ou){log('قياس القدرة','لا يوجد ONU.',false);return}
+  const r=pmRead(ou),j=()=>(Math.random()-.5)*.2,fx=r.f.s==='down'?'LOS':(r.f.rx+j()).toFixed(1),ox=r.o.s==='down'?'LOS':(r.o.rx+j()).toFixed(1);
+  log('Power Meter',`${bi('مدخل السبليتر','Splitter input')}: ${fx} dBm (${bi('طبيعي','normal')} −11…−4) · ONU ${S.N[ou].e}: ${ox} dBm (${bi('طبيعي','normal')} −24…−12)`,r.code==='ok',r.code!=='ok'&&!r.code.startsWith('los'));
 };
 $('tog').onclick=()=>{
   const on=S.on[selN]=!S.on[selN];on?tkClose('N'+selN):tkOpen('N'+selN,`${S.N[selN].n}: جهاز معطّل`);
@@ -279,11 +306,11 @@ $('add').onclick=()=>{
 };
 $('fib').onchange=e=>{S.cfg.fib=e.target.value;log('الليف',FIB[S.cfg.fib][0],true);update()};
 $('rat').onchange=e=>{
-  if(Object.keys(S.v).length>+e.target.value){e.target.value=S.cfg.ratio;log('السبليتر','عدد ONT أكبر من منافذ النسبة المختارة.',false);return}
+  if(maxOnus()>+e.target.value){e.target.value=S.cfg.ratio;log('السبليتر','عدد ONT أكبر من منافذ النسبة المختارة.',false);return}
   S.cfg.ratio=+e.target.value;fill();update();
 };
 $('clear').onclick=()=>$('log').replaceChildren();
-$('reset').onclick=()=>{S=base();selN='pc1';selL='switch-spl';build();$('log').replaceChildren();log('إعادة ضبط','عادت الشبكة والإحصاءات إلى الحالة الافتراضية.',true);update()};
+$('reset').onclick=()=>{S=base();selN='pc1';selL='switch-fat1';build();$('log').replaceChildren();log('إعادة ضبط','عادت الشبكة والإحصاءات إلى الحالة الافتراضية.',true);update()};
 /* persistence */
 const snap=()=>JSON.stringify({...S,tr:null,ver:Engine.VERSION});
 function load(o){
@@ -326,7 +353,7 @@ COL.forEach((c,i)=>$('col').add(new Option(`${i+1} · ${c[0]}`,i+1)));
 const colOf=k=>S.L[k].col||Object.keys(S.L).filter(x=>S.L[x].t==='fo').indexOf(k)%12+1;
 function dist(id){const p=path('switch',id);let d=0;for(let i=0;i<p.length-1;i++){const l=S.L[linkKey(p[i],p[i+1])];if(l)d+=l.len}return d}
 function alloc(){
-  const on=Object.keys(S.v).filter(k=>S.on[k]),tot=on.reduce((a,k)=>a+(S.bw[k]||100),0),cap=1244,r={};
+  const on=onus().filter(k=>S.on[k]),tot=on.reduce((a,k)=>a+(S.bw[k]||100),0),cap=1244,r={};
   on.forEach(k=>{const b=S.bw[k]||100;r[k]=S.dba?(tot>cap?b*cap/tot:b):Math.min(b,cap/on.length)});
   return{r,tot,cong:Math.max(0,tot/cap-1)};
 }
@@ -334,14 +361,14 @@ function qos(a,b,e){
   const A=alloc(),c=$('qos').value,k={v:0,vi:1,d:3}[c],dp={v:0,vi:.1,d:.4}[c];let why='';
   if(S.acl.some(r=>r.s===a&&r.d===b))why='محظور بقاعدة ACL';
   else if(S.fw&&S.v[a]&&S.v[b]&&S.v[a]!==S.v[b])why='حظر الجدار الناري بين الشبكات الافتراضية';
-  else if(S.atk&&((S.v[a]&&a!==S.atk)||(S.v[b]&&b!==S.atk))&&route(a,b).includes('spl'))why='ONT مارق يشوّش الإرسال العكسي';
+  else if(S.atk&&(rp=>rp.some(isSpl)&&!rp.includes(S.atk))(route(a,b)))why='ONT مارق يشوّش الإرسال العكسي';
   const ok=!why&&(e.s==='ok'||(e.s==='warn'&&Math.random()>.35))&&Math.random()>=A.cong*dp;
   return{ok,why,ms:+(e.base*(1+A.cong*k)+Math.random()*1.5).toFixed(2)};
 }
 function biz(){
   let capex=0,km=0;Object.values(S.L).forEach(l=>{if(l.t==='fo'){km+=l.len;capex+=l.len*400+l.sp*15+16+(l.odf?60:0)}});
-  const subs=Object.keys(S.v).filter(k=>S.on[k]).length,rev=subs*S.biz.fee,opex=km*S.biz.opex,net=rev-opex;
-  return{capex,rev,opex,net,pay:net>0?capex/net:Infinity,roi:capex?net*12/capex*100:0,util:subs/S.cfg.ratio*100};
+  const subs=onus().filter(k=>S.on[k]).length,rev=subs*S.biz.fee,opex=km*S.biz.opex,net=rev-opex;
+  return{capex,rev,opex,net,pay:net>0?capex/net:Infinity,roi:capex?net*12/capex*100:0,util:subs/(S.cfg.ratio*Math.max(1,Object.keys(S.N).filter(isSpl).length))*100};
 }
 
 /* ===== undo/redo, tour, scenarios ===== */
@@ -363,9 +390,9 @@ let ts=0;
 function tour(i){ts=i;if(i>=TOUR.length){$('tour').hidden=true;try{localStorage.setItem('netsim-tour','1')}catch{}return}
   $('tour').hidden=false;$('tt').textContent=TOUR[i][0];$('tp').textContent=`(${i+1}/${TOUR.length}) `+TOUR[i][1];$('tn').textContent=i===TOUR.length-1?'ابدأ':'التالي';$('tn').focus()}
 $('tn').onclick=()=>tour(ts+1);$('tx').onclick=()=>tour(99);$('hl').onclick=()=>tour(0);
-const FS=[{t:'انقطاع بعد أعمال حفر',k:'switch-spl',f:'cut',c:'شكوى: انقطاع الإنترنت عن جميع المشتركين بعد أعمال حفر قرب الشارع.'},
-  {t:'بطء بعد صيانة صندوق التوزيع',k:'spl-pc2',f:'dirty',pre:l=>{l.odf=1},c:'شكوى: بطء وانقطاع متكرر عند مشترك واحد بعد تبديل توصيلة في صندوق التوزيع.'},
-  {t:'إشارة ضعيفة عند مشترك بعيد',k:'spl-pc3',f:'bend',pre:l=>{l.len=2.5;l.sp=2},c:'شكوى: إشارة ضعيفة عند مشترك بعيد بعد تركيب كابل جديد داخل المنزل.'}];
+const FS=[{t:'انقطاع بعد أعمال حفر',k:'switch-fat1',f:'cut',c:'شكوى: انقطاع الإنترنت عن جميع المشتركين بعد أعمال حفر قرب الشارع.'},
+  {t:'بطء بعد صيانة صندوق التوزيع',k:'spl1-onu2',f:'dirty',pre:l=>{l.odf=1},c:'شكوى: بطء وانقطاع متكرر عند مشترك واحد بعد تبديل توصيلة في صندوق التوزيع.'},
+  {t:'إشارة ضعيفة عند مشترك بعيد',k:'spl2-onu3',f:'bend',pre:l=>{l.len=2.5;l.sp=2},c:'شكوى: إشارة ضعيفة عند مشترك بعيد بعد تركيب كابل جديد داخل المنزل.'}];
 $('fsb').onclick=()=>{
   const sc=FS[+$('fs').value];S=base();selN='pc1';selL='router-switch';build();
   if(sc.pre)sc.pre(S.L[sc.k]);setFault(sc.k,sc.f,1);S.tr={k:sc.k,f:sc.f,t:Date.now(),w:0,n:sc.t};
@@ -379,7 +406,7 @@ const DX={los:['LOS: لا يصل ضوء (Rx < −40 dBm). حدّد موقع ال
 function diag(){
   const a=$('source').value,b=$('target').value;
   if(a===b){$('dg2').innerHTML='';$('dgm').textContent='اختر جهازين مختلفين';return}
-  const p=route(a,b),m=ev(p),x=ev(p,1),ex=m.loss-x.loss,far=p.some(n=>S.v[n]&&dist(n)>20);const[v,c]=DX[Engine.diagnose({down:m.s==='down',fo:m.fo,far,ex,ov:m.ov,m:m.m})];
+  const p=route(a,b),m=ev(p),x=ev(p,1),ex=m.loss-x.loss,far=p.some(n=>kd(n)==='onu'&&dist(n)>20);const[v,c]=DX[Engine.diagnose({down:m.s==='down',fo:m.fo,far,ex,ov:m.ov,m:m.m})];
   const f=(n,u)=>m.fo?n.toFixed(2)+u:'—';
   $('dg2').innerHTML=`<tr><td>Tx (GPON B+: ‎+1.5…+5)</td><td>${S.cfg.tx.toFixed(2)} dBm</td></tr><tr><td>Rx المتوقع (سليم)</td><td>${f(x.rx,' dBm')}</td></tr><tr><td>Rx المقاس</td><td>${m.s==='down'?'LOS':f(m.rx,' dBm')}</td></tr><tr><td>الفقد الزائد</td><td>${m.s==='down'?'—':f(ex,' dB')}</td></tr><tr><td>نافذة Rx المسموحة</td><td>${S.cfg.sens} … ${S.cfg.ovl} dBm</td></tr>`;
   $('dgm').className='li '+c;$('dgm').textContent=v;
@@ -413,7 +440,7 @@ function osiCheck(a,b,svc){
   const ok7={icmp:['Echo Reply','Echo Reply'],dns:['تمّت الإجابة على الاستعلام','Query answered'],dhcp:['اكتمل DORA','DORA complete'],web:['HTTP 200 OK','HTTP 200 OK'],mail:['SMTP 250 OK','SMTP 250 OK']}[svc];
   const C=[
     ()=>e.s==='down'?[0,'لا ضوء أو وصلة/جهاز معطّل في المسار','Light lost, or a link/device on the path is down']:e.s==='fail'?[0,`Rx ${e.rx.toFixed(1)} dBm خارج النافذة`,`Rx ${e.rx.toFixed(1)} dBm outside the window`]:e.s==='warn'?[2,'تعمل بهامش ضعيف أو تشبع','Works with weak margin or overload']:[1,'الإشارة سليمة','Signal healthy'],
-    ()=>S.atk&&p.includes('spl')&&((S.v[a]&&a!==S.atk)||(S.v[t]&&t!==S.atk))?[0,'ONT مارق يشوّش الإرسال العكسي','Rogue ONT jams the upstream']:[1,`الإطارات تُمرَّر · VLAN ${S.v[a]||'—'}→${S.v[t]||'—'}`,`Frames forwarded · VLAN ${S.v[a]||'—'}→${S.v[t]||'—'}`],
+    ()=>S.atk&&p.some(isSpl)&&!p.includes(S.atk)?[0,'ONT مارق يشوّش الإرسال العكسي','Rogue ONT jams the upstream']:[1,`الإطارات تُمرَّر · VLAN ${S.v[a]||'—'}→${S.v[t]||'—'}`,`Frames forwarded · VLAN ${S.v[a]||'—'}→${S.v[t]||'—'}`],
     ()=>blk(a,t)?[0,'محظور بقاعدة ACL أو الجدار الناري','Blocked by ACL or firewall']:[1,`${ip(a)} → ${ip(t)}`,`${ip(a)} → ${ip(t)}`],
     ()=>alloc().cong>0?[2,'ازدحام: إعادة إرسال TCP','Congestion: TCP retransmissions']:[1,`المنفذ ${sv[0]} مفتوح`,`Port ${sv[0]} open`],
     ()=>[1,'الجلسة تُنشأ','Session established'],
@@ -434,14 +461,17 @@ const INFO={
  router:{l:['3 (الشبكة)','3 (Network)'],p:'IP · NAT · Inter-VLAN',t:[['يوجّه الحزم بين الشبكات والإنترنت','Routes packets between networks and the Internet'],['يربط شبكات VLAN المختلفة (Inter-VLAN routing)','Connects different VLANs (inter-VLAN routing)'],['ينفّذ NAT وقواعد ACL والجدار الناري','Applies NAT, ACLs and the firewall']],i:['عند تعطله: لا إنترنت ولا اتصال بين الـ VLAN.','If down: no Internet and no inter-VLAN traffic.']},
  switch:{l:['2 (ربط البيانات)','2 (Data link)'],p:'Ethernet · VLAN 802.1Q · GPON OLT',t:[['يحوّل الإطارات حسب عناوين MAC','Forwards frames by MAC address'],['يفصل الشبكات المنطقية بـ VLAN','Separates logical networks with VLANs'],['الـ OLT يدير الـ ONT ويوزّع النطاق (DBA)','The OLT manages ONTs and allocates bandwidth (DBA)']],i:['عند تعطله: ينقطع كل ما يتصل به.','If down: everything attached to it is cut off.']},
  spl:{l:['1 (الفيزيائية)','1 (Physical)'],p:'Passive optical splitter',t:[['يقسم الضوء بين عدة مشتركين دون كهرباء','Splits light among subscribers with no power'],['يضيف فقداً ثابتاً (1:4 ≈ 7.2 dB)','Adds fixed loss (1:4 ≈ 7.2 dB)'],['يحدّد عدد المشتركين لكل منفذ PON','Sets how many subscribers share a PON port']],i:['عند تعطله: ينقطع كل المشتركين عليه.','If it fails: all subscribers behind it lose service.']},
- pc:{l:['1–7 (طرف نهائي)','1–7 (end device)'],p:'ONT · NIC · IP · TCP/UDP',t:[['الـ ONT يحوّل الضوء إلى إشارة كهربائية','The ONT converts light to an electrical signal'],['يطلب IP (DHCP) وأسماء (DNS) وصفحات (HTTP)','Requests IP (DHCP), names (DNS) and pages (HTTP)'],['يخضع لقواعد VLAN وACL','Subject to VLAN and ACL rules']],i:['عند تعطله: يخسر هذا المستخدم الخدمة فقط.','If down: only this user loses service.']},
+ fat:{l:['1 (الفيزيائية)','1 (Physical)'],p:'FAT · Fiber Access Terminal',t:[['صندوق توزيع يقرّب الألياف من المشتركين','Distribution box bringing fiber close to subscribers'],['يحتوي عدة سبلترات (حتى 4) ويحمي اللحامات والموصلات','Houses several splitters (up to 4) and protects splices and connectors'],['نقطة اختبار: قِس الباور ميتر عند مدخله','Test point: measure the power meter at its input']],i:['عند تعطله: ينقطع كل السبلترات داخله.','If down: every splitter inside it is cut off.']},
+ onu:{l:['1–2 (الفيزيائية/الربط)','1–2 (Physical / Data link)'],p:'GPON ONU · GEM · 1310 nm ↑ / 1490 nm ↓',t:[['يحوّل الضوء إلى إشارة كهربائية ويرسل صاعداً بـ 1310 nm','Converts light to an electrical signal and sends upstream at 1310 nm'],['يخدم عدة راوترات منزلية على منافذ LAN (حتى 4)','Serves several home routers on LAN ports (up to 4)'],['ينال نطاقه من الـ OLT بحسب DBA','Gets its bandwidth from the OLT through DBA']],i:['عند تعطله: تنقطع الراوترات والحاسبات خلفه فقط.','If down: only the routers and PCs behind it lose service.']},
+ hr:{l:['3 (الشبكة)','3 (Network)'],p:'Home router · NAT · DHCP · Wi-Fi',t:[['يوزّع عناوين IP داخلية للحاسبات (DHCP محلي)','Hands out private IPs to PCs (local DHCP)'],['يترجم العناوين (NAT) نحو الـ ONU','Translates addresses (NAT) toward the ONU'],['يربط عدة حاسبات سلكياً أو Wi-Fi','Connects several PCs by cable or Wi-Fi']],i:['عند تعطله: تنقطع حاسبات هذا المنزل فقط.','If down: only this home’s PCs lose service.']},
+ pc:{l:['7 (التطبيق)','7 (Application)'],p:'NIC · IP · TCP/UDP · browser',t:[['جهاز المستخدم النهائي','End-user device'],['يطلب IP (DHCP) وأسماء (DNS) وصفحات (HTTP)','Requests IP (DHCP), names (DNS) and pages (HTTP)'],['يخضع لقواعد VLAN وACL','Subject to VLAN and ACL rules']],i:['عند تعطله: يخسر هذا المستخدم الخدمة فقط.','If down: only this user loses service.']},
  sw2:{l:['2 (ربط البيانات)','2 (Data link)'],p:'STP 802.1D',t:[['يوفّر مساراً احتياطياً (Redundancy)','Provides a redundant path'],['STP يحجب رابطاً لمنع الحلقات (Loop)','STP blocks one link to prevent loops'],['يفتح الرابط المحجوب عند سقوط الأساسي','Unblocks the backup link when the primary fails']],i:['عند تعطله: لا تأثر طالما الرابط الأساسي سليم.','If down: no impact while the primary link is healthy.']},
  dhcp:{l:['7 (التطبيق)','7 (Application)'],p:'UDP 67/68',t:[['يمنح الأجهزة عناوين IP تلقائياً (DORA)','Assigns IPs automatically (DORA)'],['يوزّع البوابة وخادم DNS ومدة التأجير','Hands out gateway, DNS server and lease time'],['يمنع تعارض العناوين ويركّز الإدارة','Prevents address conflicts, centralizes management']],i:['عند تعطله: لا تحصل الأجهزة الجديدة على IP.','If down: new devices get no IP address.']},
  dns:{l:['7 (التطبيق)','7 (Application)'],p:'UDP/TCP 53',t:[['يحوّل الأسماء إلى عناوين IP (web.local)','Resolves names to IPs (web.local)'],['يخزّن الاستعلامات مؤقتاً لتسريع الاستجابة','Caches queries to speed up answers'],['يحيل ما لا يعرفه إلى خوادم أعلى','Forwards unknown names to upstream servers']],i:['عند تعطله: ping بالـ IP يعمل لكن المواقع بالأسماء تفشل.','If down: ping by IP works but names fail.']},
  web:{l:['7 (التطبيق) + TLS (6)','7 (Application) + TLS (6)'],p:'TCP 80/443',t:[['يستضيف المواقع ويرد على طلبات HTTP/S','Hosts sites and answers HTTP/S requests'],['يشفّر الاتصال بـ TLS','Encrypts connections with TLS'],['قد يوزّع الحمل ويسجّل الطلبات','May balance load and log requests']],i:['عند تعطله: لا تُفتح الصفحات رغم سلامة الشبكة.','If down: pages do not load although the network is fine.']},
  mail:{l:['7 (التطبيق)','7 (Application)'],p:'SMTP 25/587 · IMAP 993',t:[['يرسل ويستقبل البريد بين الخوادم (SMTP)','Sends/receives mail between servers (SMTP)'],['يخزّن الصناديق ويقدّمها للعملاء (IMAP)','Stores mailboxes and serves clients (IMAP)'],['يفلتر الرسائل المزعجة والفيروسات','Filters spam and malware']],i:['عند تعطله: لا يصل البريد ولا يُرسل.','If down: mail is neither delivered nor sent.']}};
 function info(){
-  const d=INFO[/^pc/.test(selN)?'pc':selN],box=$('srv');box.replaceChildren();
+  const d=INFO[kd(selN)]||INFO[selN],box=$('srv');box.replaceChildren();
   if(!d){box.textContent='—';return}
   const h=document.createElement('strong'),m=document.createElement('p'),u=document.createElement('ul'),f=document.createElement('p');
   h.textContent=S.N[selN].n+(ip(selN)?' · '+ip(selN):'');m.textContent=bi(`الطبقة: ${d.l[0]} · ${d.p}`,`Layer: ${d.l[1]} · ${d.p}`);
@@ -450,21 +480,24 @@ function info(){
 }
 /* ===== v2.2: routing/NAT/STP, map+BOM, scenarios library, scoreboard ===== */
 const ls=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}},ss=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+const cnt=k=>Object.keys(S.N).filter(x=>kd(x)===k).length;
 function bom(){
   const fo=Object.entries(S.L).filter(([,l])=>l.t==='fo'),km=fo.reduce((a,[,l])=>a+l.len,0),sp=fo.reduce((a,[,l])=>a+l.sp,0),odf=fo.filter(([,l])=>l.odf).length;
-  $('bom').innerHTML=`<tr><td>طول الكابل الكلي</td><td>${km.toFixed(2)} km</td></tr><tr><td>اللحامات</td><td>${sp}</td></tr><tr><td>الموصلات</td><td>${fo.length*2+odf*2}</td></tr><tr><td>صناديق ODF</td><td>${odf}</td></tr><tr><td>سبليتر 1:${S.cfg.ratio}</td><td>1</td></tr><tr><td>وحدات ONT</td><td>${Object.keys(S.v).length}</td></tr>`;
-  const c=$('mp'),g=c.getContext('2d'),w=c.width,h=c.height,x0=50,y0=h/2,x1=260;g.clearRect(0,0,w,h);g.font='11px Tahoma';
-  const seg=(k,xa,ya,xb,yb,lab)=>{
-    const l=S.L[k];g.strokeStyle=l.f==='cut'?css('--red'):COL[colOf(k)-1][1];g.lineWidth=3;g.setLineDash(l.f==='cut'?[6,5]:[]);g.beginPath();g.moveTo(xa,ya);g.lineTo(xb,yb);g.stroke();g.setLineDash([]);
-    g.fillStyle=css('--amber');for(let i=1;i<=l.sp;i++){const t=i/(l.sp+1);g.fillRect(xa+(xb-xa)*t-3,ya+(yb-ya)*t-3,6,6)}
-    if(l.f!=='ok'&&!(S.tr&&S.tr.k===k)){g.fillStyle=css('--red');g.fillText('✖',xa+(xb-xa)*l.fp-4,ya+(yb-ya)*l.fp+4)}
-    g.fillStyle=css('--muted');g.fillText(lab,(xa+xb)/2-20,(ya+yb)/2-8);
-  };
-  g.fillStyle=css('--text');g.fillText('OLT',x0-14,y0-14);g.fillText('FDH 1:'+S.cfg.ratio,x1-22,y0-14);
-  if(S.L['switch-spl'])seg('switch-spl',x0,y0,x1,y0,S.L['switch-spl'].len+' km');
-  const dr=Object.entries(S.L).filter(([,l])=>l.a==='spl');
-  dr.forEach(([k,l],i)=>{const n=dr.length,an=n===1?0:(i/(n-1)-.5)*1.6,px=40+Math.min(150,Math.sqrt(l.len*1000)*5),xb=x1+Math.cos(an)*px,yb=y0+Math.sin(an)*px;
-    seg(k,x1,y0,xb,yb,Math.round(l.len*1000)+' m');g.fillStyle=css('--text');g.fillText(S.N[l.b].e,xb+6,yb+4)});
+  $('bom').innerHTML=`<tr><td>طول الكابل الكلي</td><td>${km.toFixed(2)} km</td></tr><tr><td>اللحامات</td><td>${sp}</td></tr><tr><td>الموصلات</td><td>${fo.length*2+odf*2}</td></tr><tr><td>صناديق ODF</td><td>${odf}</td></tr><tr><td>الفاتات (FAT)</td><td>${cnt('fat')}</td></tr><tr><td>السبلترات 1:${S.cfg.ratio}</td><td>${cnt('spl')}</td></tr><tr><td>وحدات ONU</td><td>${cnt('onu')}</td></tr><tr><td>الراوترات المنزلية</td><td>${cnt('hr')}</td></tr><tr><td>الحاسبات</td><td>${cnt('pc')}</td></tr>`;
+  const c=$('mp'),g=c.getContext('2d'),w=c.width,h=c.height;g.clearRect(0,0,w,h);g.font='11px Tahoma';
+  const dep={switch:0},q=['switch'];
+  while(q.length){const a=q.shift();Object.values(S.L).forEach(l=>{if(l.t!=='fo')return;const n=l.a===a?l.b:l.b===a?l.a:null;if(n&&dep[n]===undefined){dep[n]=dep[a]+1;q.push(n)}})}
+  const D=Math.max(1,...Object.values(dep)),cols={},P={};
+  Object.entries(dep).forEach(([id,d])=>(cols[d]=cols[d]||[]).push(id));
+  Object.entries(cols).forEach(([d,ids])=>ids.forEach((id,i)=>{P[id]=[40+d*(w-130)/D,(i+1)*h/(ids.length+1)]}));
+  Object.entries(S.L).forEach(([k,l])=>{
+    if(l.t!=='fo'||!P[l.a]||!P[l.b])return;const a=P[l.a],b=P[l.b],cut=l.f==='cut';
+    g.strokeStyle=cut?css('--red'):COL[colOf(k)-1][1];g.lineWidth=3;g.setLineDash(cut?[6,5]:[]);g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();g.setLineDash([]);
+    g.fillStyle=css('--amber');for(let i=1;i<=l.sp;i++){const t=i/(l.sp+1);g.fillRect(a[0]+(b[0]-a[0])*t-3,a[1]+(b[1]-a[1])*t-3,6,6)}
+    if(l.f!=='ok'&&!(S.tr&&S.tr.k===k)){g.fillStyle=css('--red');g.fillText('✖',a[0]+(b[0]-a[0])*l.fp-4,a[1]+(b[1]-a[1])*l.fp+4)}
+    g.fillStyle=css('--muted');g.fillText(l.len>=1?l.len+' km':Math.round(l.len*1000)+' m',(a[0]+b[0])/2-14,(a[1]+b[1])/2-6);
+  });
+  Object.entries(P).forEach(([id,p])=>{g.fillStyle=css('--text');g.beginPath();g.arc(p[0],p[1],5,0,7);g.fill();g.fillText(S.N[id].e,p[0]-18,p[1]+17)});
   g.fillStyle=css('--amber');g.fillText('■ '+bi('لحام','splice'),8,h-8);
 }
 function rt(){
@@ -493,10 +526,10 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.data
 /* ===== normal power-meter readings: feeder -4..-11 dBm, ONT -12..-24 dBm ===== */
 const dk=()=>{const D=Engine.DIR[S.cfg.fib];return D?D.d:S.cfg.fib};
 function pmRead(ont){
-  const f=ev1(['switch','spl'],0,dk()),o=ev1(path('switch',ont),0,dk());
-  const oth=Object.keys(S.v).filter(k=>k!==ont&&S.on[k]).map(k=>ev1(path('switch',k),0,dk())).filter(x=>x.s!=='down').map(x=>x.rx).sort((a,b)=>a-b);
+  const sp=splOf(ont),f=ev1(path('switch',sp),0,dk()),o=ev1(path('switch',ont),0,dk());
+  const oth=onus().filter(k=>k!==ont&&S.on[k]).map(k=>ev1(path('switch',k),0,dk())).filter(x=>x.s!=='down').map(x=>x.rx).sort((a,b)=>a-b);
   const med=oth.length?oth[Math.floor(oth.length/2)]:null,d=med==null||o.s==='down'?0:o.rx-med;
-  const bf=ev1(['switch','spl'],1,dk()).rx,df=f.s==='down'?0:f.rx-bf;
+  const bf=ev1(path('switch',sp),1,dk()).rx,df=f.s==='down'?0:f.rx-bf;
   let code=Engine.meterVerdict(f,o);if(code==='ok'&&df<-1.2)code='feeder_degraded';if(code==='ok'&&d<-1.2)code='drop_diff';
   return{f,o,d,df,code};
 }
@@ -508,17 +541,54 @@ const PMM={ok:['القراءات ضمن النطاق الطبيعي. لا عطل
  drop_low:['الرئيسي سليم لكن القراءة عند ONT أقل من −24 dBm: الخلل في الكبل الفرعي (موصل ONT متسخ، انحناء، لحام سيئ).','Main cable is fine but the ONT reading is below −24 dBm: fault in the drop (dirty ONT connector, bend, bad splice).'],
  ont_high:['القراءة عند ONT أعلى من −12 dBm: تحقق من نسبة السبليتر أو قصر الوصلة.','ONT reading is above −12 dBm: check the splitter ratio or an unusually short link.']};
 function pmv(){
-  const ont=S.v[selN]?selN:Object.keys(S.v)[0],r=pmRead(ont),W=Engine.WIN,fm=x=>x.s==='down'?'LOS':x.rx.toFixed(1)+' dBm',st=(x,w)=>x.s==='down'?'✘':x.rx>=w[0]&&x.rx<=w[1]?'✔':'✘';
+  if(!onuOf(selN)){$('pmv').innerHTML='';$('pmm').textContent='—';return}
+  const ont=onuOf(selN),r=pmRead(ont),W=Engine.WIN,fm=x=>x.s==='down'?'LOS':x.rx.toFixed(1)+' dBm',st=(x,w)=>x.s==='down'?'✘':x.rx>=w[0]&&x.rx<=w[1]?'✔':'✘';
   $('pmv').innerHTML=`<tr><td>${bi('مدخل السبليتر (الكابل الرئيسي)','Splitter input (main cable)')}</td><td>${fm(r.f)} ${st(r.f,W.feeder)}</td></tr><tr><td>${bi('الطبيعي','Normal')}</td><td>−11 … −4 dBm</td></tr><tr><td>ONT ${esc(S.N[ont].e)}</td><td>${fm(r.o)} ${st(r.o,W.ont)}</td></tr><tr><td>${bi('الطبيعي','Normal')}</td><td>−24 … −12 dBm</td></tr>`;
   $('pmm').className='li '+(r.code==='ok'?'ok':r.code.startsWith('los')?'fail':'warnc');
   $('pmm').textContent=r.code==='feeder_degraded'?bi(`القراءة عند مدخل السبليتر أقل من القيمة المتوقعة عند التركيب بـ ${(-r.df).toFixed(1)} dB رغم أنها ضمن النطاق: بداية تدهور في الكابل الرئيسي (موصل ODF متسخ أو انحناء). قارن مع سجل القياس عند التسليم.`,`Splitter-input reading is ${(-r.df).toFixed(1)} dB below the expected commissioning value although within range: early degradation in the main cable (dirty ODF connector or bend). Compare with the hand-over record.`):r.code==='drop_diff'?bi(`قراءة هذا الـONT أضعف من بقية المشتركين بـ ${(-r.d).toFixed(1)} dB رغم أنها ضمن النطاق: الخلل في الكبل الفرعي (موصل ONT متسخ أو انحناء).`,`This ONT reads ${(-r.d).toFixed(1)} dB weaker than the other subscribers although within range: fault in its drop (dirty ONT connector or bend).`):bi(...PMM[r.code]);
 }
+/* ===== hierarchy editing ===== */
+const NK={fat:{p:'olt',max:4,i:'📦',n:'الفاتة',lk:['fo',8,2,1]},spl:{p:'fat',max:4,i:'🔱',n:'سبلتر',lk:['fo',.005,0,0]},onu:{p:'spl',i:'📟',n:'ONU',lk:['fo',.3,0,0]},hr:{p:'onu',max:4,i:'📶',n:'راوتر منزلي',lk:['cu',.01,0,0]},pc:{p:'hr',max:8,i:'💻',n:'حاسوب',lk:['cu',.01,0,0]}};
+const PN={olt:'الـ OLT',fat:'فاتة',spl:'سبلتر',onu:'ONU',hr:'راوتر منزلي'};
+$('add').onclick=()=>{
+  const kind=$('ak').value,d=NK[kind];
+  const par=d.p==='olt'?'switch':kd(selN)===d.p?selN:path('switch',selN).find(n=>kd(n)===d.p);
+  if(!par){log('إضافة',`حدّد ${PN[d.p]} أولاً (الجهاز الأب).`,false);return}
+  const lim=kind==='onu'?S.cfg.ratio:d.max;
+  if(lim&&kids(par).filter(x=>kd(x)===kind).length>=lim){log('إضافة',`تحت ${S.N[par].n} لا تتسع لأكثر من ${lim}.`,false);return}
+  const n=Math.max(0,...Object.keys(S.N).map(k=>(k.match(new RegExp('^'+kind+'(\\d+)$'))||[0,0])[1]).map(Number))+1,id=kind+n;
+  S.N[id]={n:`${d.n} ${n}`,e:{fat:'FAT-'+n,spl:'Splitter 1:'+S.cfg.ratio,onu:'ONU-'+String(n).padStart(2,'0'),hr:'Home router '+n,pc:'PC-'+String(n).padStart(2,'0')}[kind],i:d.i,k:kind,x:50,y:50};
+  if(kind==='onu'){S.N[id].ip='10.20.0.'+n;S.bw[id]=100}
+  if(kind==='hr')S.N[id].ip='192.168.100.'+n;
+  if(kind==='pc'){const sib=kids(par).find(x=>S.v[x]);S.v[id]=sib?S.v[sib]:10}
+  S.on[id]=true;
+  S.L[par+'-'+id]={a:par,b:id,t:d.lk[0],len:d.lk[1],sp:d.lk[2],f:'ok',fp:.5,...(d.lk[3]?{odf:1}:{}),tc:+((Math.random()-.5)*.2).toFixed(3),ts:+((Math.random()-.5)*.06).toFixed(3)};
+  autoLayout(S);build();log('إضافة',`أُضيف ${S.N[id].n} تحت ${S.N[par].n}.`,true);selN=id;update();
+};
+$('del').onclick=()=>{
+  if(!NK[kd(selN)]){log('حذف','لا يمكن حذف هذا الجهاز (النواة/الخوادم).',false);return}
+  const par=path('switch',selN).slice(-2)[0]||'switch',gone=new Set([selN]),walk=id=>kids(id).forEach(x=>{gone.add(x);walk(x)});walk(selN);
+  gone.forEach(id=>{delete S.N[id];delete S.on[id];delete S.v[id];delete S.bw[id]});
+  Object.keys(S.L).forEach(k=>{if(gone.has(S.L[k].a)||gone.has(S.L[k].b))delete S.L[k]});
+  S.acl=S.acl.filter(r=>!gone.has(r.s)&&!gone.has(r.d));if(gone.has(S.atk))S.atk=null;
+  if(!S.L[selL])selL=Object.keys(S.L)[0];selN=par;autoLayout(S);build();log('حذف',`حُذف ${gone.size} جهاز/أجهزة.`,true);update();
+};
+$('lay').onclick=()=>{autoLayout(S);build();update()};
+const HN={olt:['فاتة','FATs'],fat:['سبلتر','splitters'],spl:['ONU','ONUs'],onu:['راوتر','routers'],hr:['حاسوب','PCs']};
+function hier(){
+  const box=$('hier');box.replaceChildren();
+  const node=id=>{const li=document.createElement('li'),c=kids(id),k=kd(id);
+    li.textContent=S.N[id].n+(c.length&&HN[k]?` (${c.length} ${bi(...HN[k])})`:'')+(S.on[id]?'':' ✘');li.style.cursor='pointer';li.style.fontWeight=id===selN?'bold':'normal';
+    li.onclick=e=>{e.stopPropagation();selN=id;update()};
+    if(c.length){const ul=document.createElement('ul');c.forEach(x=>ul.append(node(x)));li.append(ul)}return li};
+  const ul=document.createElement('ul');ul.append(node('switch'));box.append(ul);
+}
 function ext(){
-  diag();oev();osi();info();rt();bom();sb();pmv();const l=S.L[selL],A=alloc(),B=biz();
+  diag();oev();osi();info();rt();bom();sb();pmv();hier();const l=S.L[selL],A=alloc(),B=biz();
   $('col').value=colOf(selL);$('odfs').value=l.odf?1:0;$('col').disabled=$('odfs').disabled=l.t==='cu';
-  $('bw').value=S.bw[selN]||100;$('bw').disabled=!S.v[selN];$('dba').value=S.dba;['tx','sens','ovl'].forEach(k=>$('c_'+k).value=S.cfg[k]);$('wdm').value=S.cfg.wdm?1:0;$('fee').value=S.biz.fee;$('opx').value=S.biz.opex;
+  const ou=onuOf(selN);$('bw').value=ou?S.bw[ou]||100:'';$('bw').disabled=!ou;$('dba').value=S.dba;['tx','sens','ovl'].forEach(k=>$('c_'+k).value=S.cfg[k]);$('wdm').value=S.cfg.wdm?1:0;$('fee').value=S.biz.fee;$('opx').value=S.biz.opex;
   $('fw').textContent='جدار ناري: '+(S.fw?'مفعّل':'معطّل');
-  $('gp').innerHTML='<tr><td>ONT</td><td>المسافة</td><td>المتعاقد</td><td>المخصص</td></tr>'+Object.keys(S.v).map(k=>{const d=dist(k);
+  $('gp').innerHTML='<tr><td>ONU</td><td>المسافة</td><td>المتعاقد</td><td>المخصص</td></tr>'+onus().map(k=>{const d=dist(k);
     return `<tr><td>${esc(S.N[k].e)}</td><td>${d.toFixed(2)} km ${d>20?'✘':'✔'}</td><td>${S.bw[k]||100} Mbps</td><td>${A.r[k]?A.r[k].toFixed(0)+' Mbps':'—'}</td></tr>`}).join('')
     +`<tr><td colspan="2">السعة الكلية 1244 Mbps</td><td colspan="2" style="direction:rtl">${A.cong>0?'ازدحام ⚠ '+(A.cong*100).toFixed(0)+'%':'لا ازدحام'}</td></tr>`;
   $('biz').innerHTML=`<tr><td>تكاليف الإنشاء CAPEX</td><td>$${B.capex.toFixed(0)}</td></tr><tr><td>الإيراد الشهري</td><td>$${B.rev.toFixed(0)}</td></tr><tr><td>OPEX شهرياً</td><td>$${B.opex.toFixed(0)}</td></tr><tr><td>الصافي الشهري</td><td>$${B.net.toFixed(0)}</td></tr><tr><td>فترة الاسترداد (شهر)</td><td>${isFinite(B.pay)?B.pay.toFixed(1):'∞'}</td></tr><tr><td>العائد السنوي ROI</td><td>${B.roi.toFixed(1)}%</td></tr><tr><td>استخدام السبليتر</td><td>${B.util.toFixed(0)}%</td></tr>`;
@@ -530,12 +600,12 @@ function ext(){
   S.acl.forEach((r,i)=>{const d=document.createElement('div');d.className='li';d.style.cursor='pointer';d.textContent=`✕ ACL ${i+1}: deny ${r.s} → ${r.d}`;d.onclick=()=>{S.acl.splice(i,1);update()};$('acl').append(d)});
   const v=S.h.filter(x=>x!=null),j=v.length>1?v.slice(1).reduce((a,x,i)=>a+Math.abs(x-v[i]),0)/(v.length-1):null,src=$('source').value;
   $('jit').textContent=j==null?'—':j.toFixed(2)+' ms';
-  $('thr').textContent=A.r[src]?(A.r[src]*(S.st.sent?S.st.succ/S.st.sent:1)).toFixed(0)+' Mbps':'—';
+  const so=onuOf(src);$('thr').textContent=A.r[so]?(A.r[so]*(S.st.sent?S.st.succ/S.st.sent:1)).toFixed(0)+' Mbps':'—';
   $('sec').textContent=S.atk?'⚠ هجوم':S.fw?'جدار ✔':S.acl.length?S.acl.length+' ACL':'—';
 }
 $('col').onchange=e=>{S.L[selL].col=+e.target.value;update()};
 $('odfs').onchange=e=>{S.L[selL].odf=+e.target.value;update()};
-$('bw').onchange=e=>{if(S.v[selN]){S.bw[selN]=Math.max(10,Math.min(1000,+e.target.value||100));update()}};
+$('bw').onchange=e=>{const ou=onuOf(selN);if(ou){S.bw[ou]=Math.max(10,Math.min(1000,+e.target.value||100));update()}};
 $('dba').onchange=e=>{S.dba=+e.target.value;update()};
 $('fee').onchange=e=>{S.biz.fee=Math.max(1,+e.target.value||25);update()};
 $('opx').onchange=e=>{S.biz.opex=Math.max(0,+e.target.value||0);update()};
@@ -543,8 +613,8 @@ $('aa').onclick=()=>{const s=$('as').value,d=$('ad').value;if(s===d||S.acl.some(
 $('fw').onclick=()=>{S.fw=S.fw?0:1;log('جدار ناري',S.fw?'تم حظر الحركة بين الشبكات الافتراضية.':'تم إيقاف الجدار.',true);update()};
 $('atk').onclick=()=>{
   if(S.atk){tkClose('ATK');log('إيقاف الهجوم',`عاد ${S.N[S.atk].n} للعمل الطبيعي.`,true,0);S.atk=null}
-  else if(S.v[selN]){S.atk=selN;tkOpen('ATK',`ONT مارق: ${S.N[selN].n} يشوّش الإرسال العكسي`);log('هجوم ONT مارق',`${S.N[selN].n} يرسل باستمرار ويعطّل بقية الأجهزة.`,false,1)}
-  else log('الهجوم','حدّد ONT (حاسوب) أولاً.',false);
+  else if(onuOf(selN)){S.atk=onuOf(selN);tkOpen('ATK',`ONU مارق: ${S.N[S.atk].n} يشوّش الإرسال العكسي`);log('هجوم ONU مارق',`${S.N[S.atk].n} يرسل باستمرار ويعطّل بقية المشتركين.`,false,1)}
+  else log('الهجوم','حدّد ONU أولاً.',false);
   update();
 };
 /* exam */

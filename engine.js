@@ -1,5 +1,5 @@
 (function(r,f){if(typeof module==='object')module.exports=f();else r.Engine=f()})(this,function(){
-const VERSION=2;
+const VERSION=3;
 const FIB={GPON:['GPON (1310 nm ↑ / 1490 nm ↓)',.35],SM1310:['SM 1310 nm',.35],SM1490:['SM 1490 nm',.25],SM1550:['SM 1550 nm',.22],MM850:['MM 850 nm',3],MM1300:['MM 1300 nm',1],XGS:['XGS-PON (1270 nm ↑ / 1577 nm ↓)',.4],XGU:['SM 1270 nm',.4],XGD:['SM 1577 nm',.22]};
 const DIR={GPON:{u:'SM1310',d:'SM1490'},XGS:{u:'XGU',d:'XGD'}};
 const SPL={2:3.5,4:7.2,8:10.5,16:13.8};
@@ -10,16 +10,16 @@ const diagnose=({down,fo,far,ex,ov,m})=>down?'los':!fo?'copper':far?'far':ex>=2.
 function migrate(o){
   if(!o||typeof o!=='object')return o;
   const c=Object.assign({tx:3,sens:-27,ovl:-8,wdm:0},o.cfg||{});
-  if(!o.ver||o.ver<2){if(c.fib==='SM1310')c.fib='GPON'}
-  return Object.assign({},o,{cfg:c,ver:VERSION});
+  return Object.assign({},o,{cfg:c});
 }
 function validate(o){
   const e=[],isN=x=>typeof x==='number'&&isFinite(x);
   if(!o||typeof o!=='object'||Array.isArray(o))return['ملف غير صالح'];
   if(!o.N||typeof o.N!=='object'||!o.L||typeof o.L!=='object'||!o.on||!o.v||!o.cfg)return['حقول مطلوبة ناقصة'];
+  if(!(o.ver>=3))return['ملف بإصدار قديم: الهيكل الجديد (فاتة ← سبلتر ← ONU ← راوتر ← حاسوب) غير متوافق. أعد البناء.'];
   const ids=Object.keys(o.N);
   if(!ids.length||ids.length>40)e.push('عدد الأجهزة غير صالح');
-  ids.forEach(k=>{const n=o.N[k];if(!/^[a-z][a-z0-9]*$/i.test(k)||!n||typeof n.n!=='string'||n.n.length>40||typeof n.e!=='string'||!isN(n.x)||!isN(n.y)||(n.ip&&!/^(\d{1,3}\.){3}\d{1,3}$/.test(n.ip)))e.push('جهاز غير صالح: '+k)});
+  ids.forEach(k=>{const n=o.N[k];if(!/^[a-z][a-z0-9]*$/i.test(k)||!n||typeof n.n!=='string'||n.n.length>40||typeof n.e!=='string'||!isN(n.x)||!isN(n.y)||(n.ip&&!/^(\d{1,3}\.){3}\d{1,3}$/.test(n.ip))||(n.k&&!['router','sw2','olt','fat','spl','onu','hr','pc','srv'].includes(n.k)))e.push('جهاز غير صالح: '+k)});
   Object.entries(o.L).forEach(([k,l])=>{
     if(!l||!o.N[l.a]||!o.N[l.b])return e.push('وصلة بأطراف مجهولة: '+k);
     if(!['cu','fo'].includes(l.t))e.push('نوع وصلة غير صالح: '+k);

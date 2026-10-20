@@ -15,6 +15,9 @@ Open `index.html` in a browser (no build step). Tests: `npm test` (Node ≥ 20).
 - Normal power-meter readings (field): main cable at splitter input −4…−11 dBm; at ONT −12…−24 dBm. Optical budget is computed per optical segment.
 - References: ITU-T G.652, G.984.2, TIA-568 (typical figures, see assumptions panel).
 
+## Topology | الهيكل
+OLT → FAT (الفاتة) → splitters → ONUs → home routers → PCs. Fault scope follows the tree: cut the feeder and everyone is down; cut one drop and only that ONU's routers/PCs are. Same-ONU traffic stays local; ONU-to-ONU traffic goes via the OLT.
+
 ## OSI & servers | الطبقات والخوادم
 Servers (DHCP, DNS, Web, Mail) sit on the switch. The OSI panel checks L1→L7 for the chosen service and names the first failing layer (e.g. fiber cut → L1, ACL/firewall → L3, DNS down → L7). Terminal: `ping trace ip vlan nslookup dhcp curl`.
 
